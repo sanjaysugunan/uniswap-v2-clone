@@ -37,17 +37,17 @@ This is a learning-focused, **production-style** reimplementation of the Uniswap
 ```
                     createPair()
    ┌──────────────┐ ───────────▶ ┌──────────────────┐
-   │   Factory     │              │   Pair (per token  │
-   │  (CREATE2      │◀───────────│   pair, holds       │
-   │   deployer)     │  registry  │   reserves + LP)     │
-   └──────────────┘              └────────┬───────────┘
+   │   Factory    │              │   Pair (per token│
+   │  (CREATE2    │◀───────────  │   pair, holds    │
+   │   deployer)  │  registry    │   reserves + LP) │
+   └──────────────┘              └──────────┬───────┘
                                             │ mint / burn / swap
                                             ▼
                                   ┌──────────────────────┐
-                                  │       Router           │
-                                  │  (user-facing entry:   │
-                                  │  addLiquidity, swap,    │
-                                  │  removeLiquidity)        │
+                                  │       Router         │
+                                  │  (user-facing entry: │
+                                  │  addLiquidity, swap, │
+                                  │  removeLiquidity)    │
                                   └──────────────────────┘
 ```
 
