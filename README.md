@@ -1,83 +1,127 @@
-# Uniswap V2 Clone
+<div align="center">
 
-A from-scratch implementation of the Uniswap V2 protocol built with Solidity and Foundry.
+# 🦄 Uniswap V2 Clone
 
-This project is being developed as a learning-focused, production-style implementation of the Uniswap V2 core contracts. The goal is to understand every component of the protocol rather than simply copying the original source code.
+**A from-scratch implementation of the Uniswap V2 protocol — built with Solidity & Foundry.**
 
-> **Status:** 🚧 Work in Progress
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=2800&pause=800&color=FF007A&center=true&vCenter=true&width=560&lines=x+*+y+%3D+k;Factory+%C2%B7+Pair+%C2%B7+Router+%C2%B7+LP+Token;Fuzzed.+Invariant-tested.+From+scratch." alt="Typing SVG" />
 
----
+[![Foundry](https://img.shields.io/badge/built%20with-Foundry-orange?style=flat-square)](https://book.getfoundry.sh/)
+[![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.24-363636?style=flat-square&logo=solidity)](https://soliditylang.org/)
+[![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-4E5EE4?style=flat-square&logo=openzeppelin&logoColor=white)](https://openzeppelin.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
+[![Status](https://img.shields.io/badge/status-work%20in%20progress-yellow?style=flat-square)](#roadmap)
 
-## Goals
-
-- Build Uniswap V2 completely from scratch
-- Understand every design decision in the protocol
-- Write production-quality Solidity
-- Write comprehensive Foundry unit tests, fuzz tests & invariant tests
-- Keep the codebase clean, modular, and well documented
+</div>
 
 ---
 
-## Tech Stack
+This is a learning-focused, **production-style** reimplementation of the Uniswap V2 core contracts, built line by line rather than copied. The goal isn't to ship a fork — it's to understand *every* design decision: why reserves are packed the way they are, why the protocol uses `UQ112x112` fixed-point math, why `MINIMUM_LIQUIDITY` exists, and what actually happens on-chain when you swap.
 
-- Solidity v0.8.24+
-- Foundry
-- OpenZeppelin
-- Forge Standard Library
+> 🚧 **Status:** Work in Progress — core AMM is fully functional, fuzz/invariant/integration test suites and flash swaps are in active development.
 
 ---
 
-## Project Structure
+## 🎯 Goals
+
+- 🔨 Build Uniswap V2 completely from scratch — no copy-pasting core logic
+- 🧠 Understand every design decision in the protocol, not just replicate it
+- ✨ Write production-quality, gas-conscious Solidity
+- 🧪 Back it with comprehensive Foundry unit, fuzz, and invariant tests
+- 🗂️ Keep the codebase clean, modular, and well documented
+
+---
+
+## 🏗️ Architecture
+
+```
+                    createPair()
+   ┌──────────────┐ ───────────▶ ┌──────────────────┐
+   │   Factory     │              │   Pair (per token  │
+   │  (CREATE2      │◀───────────│   pair, holds       │
+   │   deployer)     │  registry  │   reserves + LP)     │
+   └──────────────┘              └────────┬───────────┘
+                                            │ mint / burn / swap
+                                            ▼
+                                  ┌──────────────────────┐
+                                  │       Router           │
+                                  │  (user-facing entry:   │
+                                  │  addLiquidity, swap,    │
+                                  │  removeLiquidity)        │
+                                  └──────────────────────┘
+```
+
+Every `Pair` is an ERC-20 LP token *and* an AMM in one contract — deployed deterministically via `CREATE2` from the `Factory`, so any pair's address can be computed off-chain without a lookup.
+
+---
+
+## 🧰 Tech Stack
+
+<div align="center">
+
+![Solidity](https://img.shields.io/badge/Solidity-363636?style=for-the-badge&logo=solidity&logoColor=white)
+![Foundry](https://img.shields.io/badge/Foundry-000000?style=for-the-badge&logo=ethereum&logoColor=white)
+![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-4E5EE4?style=for-the-badge&logo=openzeppelin&logoColor=white)
+
+</div>
+
+- **Solidity** v0.8.24+
+- **Foundry** (forge, cast, anvil)
+- **OpenZeppelin** contracts
+- **Forge Standard Library**
+
+---
+
+## 📂 Project Structure
 
 ```text
 .
 ├── src
 │   ├── core
-│   │   ├── UniswapV2ERC20.sol 
+│   │   ├── UniswapV2ERC20.sol
 │   │   ├── UniswapV2Factory.sol
 │   │   └── UniswapV2Pair.sol
 │   ├── interfaces
-|   |   ├── IUniswapV2Callee.sol
-|   |   ├── IUniswapV2ERC20.sol
-|   |   ├── IUniswapV2Factory.sol
-|   |   ├── IUniswapV2Pair.sol
+│   │   ├── IUniswapV2Callee.sol
+│   │   ├── IUniswapV2ERC20.sol
+│   │   ├── IUniswapV2Factory.sol
+│   │   ├── IUniswapV2Pair.sol
 │   │   └── IUniswapV2Router.sol
 │   ├── libraries
-│   │   ├── TransferHelper.sol 
-│   │   ├── UniswapV2Library.sol 
-│   │   └── UQ112x112.sol 
+│   │   ├── TransferHelper.sol
+│   │   ├── UniswapV2Library.sol
+│   │   └── UQ112x112.sol
 │   └── periphery
-│       └── UniswapV2Router.sol 
+│       └── UniswapV2Router.sol
 ├── test
 │   ├── unit
 │   │   ├── UniswapV2Factory.t.sol
 │   │   ├── UniswapV2Pair.t.sol
 │   │   └── UniswapV2Router.t.sol
 │   ├── fuzz
-|   |   ├── 
-|   |   ├── 
-│   │   └── 
 │   └── invariant
-│       ├── 
-│       ├── 
-│       └── 
 └── script
 ```
 
 ---
 
-## Features
+## ✅ Features
 
-### Core
+<table>
+<tr>
+<td valign="top" width="33%">
 
+**Core**
 - [x] Factory
 - [x] Pair
 - [x] Router
 - [x] Library
-- [x] ERC20 LP Token
+- [x] ERC-20 LP Token
 
-### Pair
+</td>
+<td valign="top" width="33%">
 
+**Pair Mechanics**
 - [x] Mint
 - [x] Burn
 - [x] Swap
@@ -85,87 +129,64 @@ This project is being developed as a learning-focused, production-style implemen
 - [x] Sync
 - [x] Price accumulator updates
 
-### Testing
+</td>
+<td valign="top" width="33%">
 
+**Testing**
 - [x] Unit tests
 - [ ] Fuzz tests
 - [ ] Invariant tests
 - [ ] Integration tests
 
+</td>
+</tr>
+</table>
+
 ---
 
-## Running
+## 🔑 The Invariant
 
-Clone the repository
+The entire protocol's solvency rests on one line:
+
+```solidity
+// k must never decrease across any swap
+assert(reserve0 * reserve1 >= k);
+```
+
+This is what the invariant test suite (in progress) is built to hammer on — randomized sequences of swaps and liquidity events, checking `k` holds under every path.
+
+---
+
+## 🚀 Running It
 
 ```bash
+# Clone the repo
 git clone https://github.com/sanjaysugunan/uniswap-v2-clone.git
-
 cd uniswap-v2-clone
-```
 
-Install dependencies
-
-```bash
+# Install dependencies
 forge install
-```
 
-Build
-
-```bash
+# Build
 forge build
-```
 
-Run all tests
-
-```bash
+# Run all tests
 forge test
-```
 
-Verbose
-
-```bash
+# Verbose traces
 forge test -vvvv
-```
 
-Coverage
-
-```bash
+# Coverage
 forge coverage
 ```
 
 ---
 
-## What I've Learned
-
-This project helped me understand topics such as
-
-- CREATE2 deterministic deployment
-- Constant product AMMs
-- Liquidity minting and burning
-- LP token accounting
-- Swap fee mechanics
-- Reserve synchronization
-- Price accumulators
-- Oracle design
-- Solidity gas optimizations
-- Foundry testing
-
----
-
-## Notes
-
-This is **not** intended to be a production deployment.
-
-The implementation is written primarily for educational purposes while following production-quality engineering practices where possible.
-
----
-
-## Roadmap
+## 🗺️ Roadmap
 
 - [x] Complete Router
-- [ ] Flash Swaps
 - [x] Library
+- [ ] Flash Swaps
 - [ ] Integration Tests
 - [ ] Invariant Testing
 - [ ] Documentation improvements
@@ -174,14 +195,42 @@ The implementation is written primarily for educational purposes while following
 
 ---
 
-## References
+## 🧠 What I've Learned
 
-- Uniswap V2 Whitepaper
-- Uniswap V2 Core
-- Uniswap V2 Periphery
+Building this from scratch (rather than reading the source and moving on) forced a real understanding of:
+
+- `CREATE2` deterministic deployment
+- Constant product AMMs (`x·y=k`)
+- Liquidity minting and burning mechanics
+- LP token accounting & `MINIMUM_LIQUIDITY` bootstrapping
+- Swap fee mechanics (the 0.3% fee, in the math)
+- Reserve synchronization (`sync` / `skim`)
+- Price accumulators & TWAP oracle design
+- Solidity gas optimizations (packed storage, `UQ112x112` fixed-point math)
+- Foundry testing methodology — unit, fuzz, and invariant
 
 ---
 
-## License
+## 📝 Notes
+
+This is **not** intended for production deployment. It's written primarily for educational purposes, while following production-quality engineering practices wherever possible — real tests, real gas-consciousness, real documentation.
+
+---
+
+## 📚 References
+
+- [Uniswap V2 Whitepaper](https://uniswap.org/whitepaper.pdf)
+- [Uniswap V2 Core](https://github.com/Uniswap/v2-core)
+- [Uniswap V2 Periphery](https://github.com/Uniswap/v2-periphery)
+
+---
+
+## 📄 License
 
 MIT
+
+---
+
+<div align="center">
+<sub>Built by <a href="https://github.com/sanjaysugunan">Sanjay Sugunan</a> · <a href="https://x.com/s4njyy">@s4njyy</a></sub>
+</div>
