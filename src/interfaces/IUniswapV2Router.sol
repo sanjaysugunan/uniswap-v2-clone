@@ -7,8 +7,8 @@ interface IUniswapV2Router {
     //////////////////////////////////////////////////////////////*/
     error UniswapV2Router__Expired();
     error UniswapV2Router__OnlyWETH();
-    error UniswapV2Router__InsufficientBAmount();
-    error UniswapV2Router__InsufficientAAmount();
+    error UniswapV2Router__InsufficientAmountB();
+    error UniswapV2Router__InsufficientAmountA();
     error UniswapV2Router__WETHTransferFailed();
     error UniswapV2Router__InsufficientOutputAmount();
     error UniswapV2Router__ExcessiveInputAmount();

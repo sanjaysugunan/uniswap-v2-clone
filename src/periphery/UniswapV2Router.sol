@@ -84,12 +84,12 @@ contract UniswapV2Router is IUniswapV2Router {
         } else {
             uint256 amountBOptimal = UniswapV2Library.quote(amountADesired, reserveA, reserveB);
             if (amountBOptimal <= amountBDesired) {
-                if (amountBOptimal < amountBMin) revert UniswapV2Router__InsufficientBAmount();
+                if (amountBOptimal < amountBMin) revert UniswapV2Router__InsufficientAmountB();
                 (amountA, amountB) = (amountADesired, amountBOptimal);
             } else {
                 uint256 amountAOptimal = UniswapV2Library.quote(amountBDesired, reserveB, reserveA);
                 assert(amountAOptimal <= amountADesired); // Mathematically impossible to break
-                if (amountAOptimal < amountAMin) revert UniswapV2Router__InsufficientAAmount();
+                if (amountAOptimal < amountAMin) revert UniswapV2Router__InsufficientAmountA();
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
         }
@@ -125,6 +125,7 @@ contract UniswapV2Router is IUniswapV2Router {
         address pair = UniswapV2Library.pairFor(i_factory, token, i_WETH);
         IWETH(i_WETH).deposit{value: amountETH}();
         if (!IWETH(i_WETH).transfer(pair, amountETH)) revert UniswapV2Router__WETHTransferFailed();
+        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, pair, amountToken);
         liquidity = IUniswapV2Pair(pair).mint(to);
         // refund dust eth, if any
         if (msg.value > amountETH) TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
@@ -147,8 +148,8 @@ contract UniswapV2Router is IUniswapV2Router {
         (uint256 amount0, uint256 amount1) = IUniswapV2Pair(pair).burn(to);
         (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
         (amountA, amountB) = token0 == tokenA ? (amount0, amount1) : (amount1, amount0);
-        if (amountA < amountAMin) revert UniswapV2Router__InsufficientAAmount();
-        if (amountB < amountBMin) revert UniswapV2Router__InsufficientBAmount();
+        if (amountA < amountAMin) revert UniswapV2Router__InsufficientAmountA();
+        if (amountB < amountBMin) revert UniswapV2Router__InsufficientAmountB();
     }
 
     function removeLiquidityETH(

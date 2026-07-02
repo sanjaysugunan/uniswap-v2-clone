@@ -170,7 +170,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         _updateReserves(
             IERC20(token0).balanceOf(address(this)), IERC20(token1).balanceOf(address(this)), reserve0, reserve1
         );
-        emit Sync(reserve0, reserve1);
     }
 
     /*//////////////////////////////////////////////////////////////

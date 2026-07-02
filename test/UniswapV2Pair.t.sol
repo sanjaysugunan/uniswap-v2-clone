@@ -25,8 +25,8 @@ contract UniswapV2PairTest is Test {
     uint256 constant STARTING_USER_BALANCE = 10 ether;
     uint256 constant EXTRA_TOKEN_AMOUNT = 5 ether;
     uint256 constant INITIAL_LIQUIDITY = 1 ether;
-    uint256 constant INITIAL_SWAP_AMOUNT = 0.01 ether;
-    uint256 constant EXTRA_SWAP_AMOUNT = 0.5 ether;
+    uint256 constant SWAP_INPUT = 0.01 ether;
+    uint256 constant INVALID_SWAP_OUTPUT = 0.5 ether;
     uint256 LOCKED_LIQUIDITY;
 
     /*//////////////////////////////////////////////////////////////
@@ -222,7 +222,7 @@ contract UniswapV2PairTest is Test {
     function testSwapRevertsIfAmountsOutIsZero() public {
         _firstMint();
 
-        _transferToPair(USER2, tokenA, INITIAL_SWAP_AMOUNT);
+        _transferToPair(USER2, tokenA, SWAP_INPUT);
 
         vm.expectRevert(IUniswapV2Pair.UniswapV2Pair__InsufficientOutputAmount.selector);
         pair.swap(0, 0, USER1, new bytes(0));
@@ -231,7 +231,7 @@ contract UniswapV2PairTest is Test {
     function testSwapRevertsIfAmountsOutIsGreaterThanReserve() public {
         _firstMint();
 
-        _transferToPair(USER2, tokenA, INITIAL_SWAP_AMOUNT);
+        _transferToPair(USER2, tokenA, SWAP_INPUT);
 
         vm.expectRevert(IUniswapV2Pair.UniswapV2Pair__InsufficientLiquidity.selector);
         pair.swap(0, EXTRA_TOKEN_AMOUNT, USER1, new bytes(0));
@@ -240,42 +240,42 @@ contract UniswapV2PairTest is Test {
     function testSwapRevertsIfInvalidToAddress() public {
         _firstMint();
 
-        _transferToPair(USER2, tokenA, INITIAL_SWAP_AMOUNT);
+        _transferToPair(USER2, tokenA, SWAP_INPUT);
 
         vm.expectRevert(IUniswapV2Pair.UniswapV2Pair_InvalidTo.selector);
-        pair.swap(INITIAL_SWAP_AMOUNT, 0, address(tokenA), new bytes(0));
+        pair.swap(SWAP_INPUT, 0, address(tokenA), new bytes(0));
     }
 
     function testSwapRevertsIfInsufficientInputAmount() public {
         _firstMint();
 
         vm.expectRevert(IUniswapV2Pair.UniswapV2Pair__InsufficientInputAmount.selector);
-        pair.swap(0, INITIAL_SWAP_AMOUNT, USER1, new bytes(0));
+        pair.swap(0, SWAP_INPUT, USER1, new bytes(0));
     }
 
     function testSwapRevertsIfKDecrease() public {
         _firstMint();
 
-        _transferToPair(USER2, tokenA, INITIAL_SWAP_AMOUNT);
+        _transferToPair(USER2, tokenA, SWAP_INPUT);
 
         vm.expectRevert(IUniswapV2Pair.UniswapV2Pair__K.selector);
-        pair.swap(0, EXTRA_SWAP_AMOUNT, USER2, new bytes(0));
+        pair.swap(0, INVALID_SWAP_OUTPUT, USER2, new bytes(0));
     }
 
     function testSwapWorks() public {
         _firstMint();
 
         (uint256 reserveIn, uint256 reserveOut,) = pair.getReserves();
-        uint256 maxAmount1Out = _getMaxOutput(reserveIn, reserveOut, INITIAL_SWAP_AMOUNT);
+        uint256 maxAmount1Out = _getMaxOutput(reserveIn, reserveOut, SWAP_INPUT);
 
-        _transferToPair(USER2, tokenA, INITIAL_SWAP_AMOUNT);
+        _transferToPair(USER2, tokenA, SWAP_INPUT);
 
         pair.swap(0, maxAmount1Out, USER2, new bytes(0));
 
-        assertEq(tokenA.balanceOf(USER2), STARTING_USER_BALANCE - INITIAL_SWAP_AMOUNT);
+        assertEq(tokenA.balanceOf(USER2), STARTING_USER_BALANCE - SWAP_INPUT);
         assertEq(tokenB.balanceOf(USER2), STARTING_USER_BALANCE + maxAmount1Out);
-        _assertReserves(INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT, INITIAL_LIQUIDITY - maxAmount1Out);
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT);
+        _assertReserves(INITIAL_LIQUIDITY + SWAP_INPUT, INITIAL_LIQUIDITY - maxAmount1Out);
+        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY + SWAP_INPUT);
         assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY - maxAmount1Out);
         assertEq(pair.totalSupply(), INITIAL_LIQUIDITY);
     }
@@ -284,14 +284,14 @@ contract UniswapV2PairTest is Test {
         _firstMint();
 
         (uint256 reserveIn, uint256 reserveOut,) = pair.getReserves();
-        uint256 maxAmount1Out = _getMaxOutput(reserveIn, reserveOut, INITIAL_SWAP_AMOUNT);
+        uint256 maxAmount1Out = _getMaxOutput(reserveIn, reserveOut, SWAP_INPUT);
 
-        _transferToPair(USER2, tokenA, INITIAL_SWAP_AMOUNT);
+        _transferToPair(USER2, tokenA, SWAP_INPUT);
 
         vm.prank(USER2);
 
         vm.expectEmit(true, true, false, true, address(pair));
-        emit Swap(USER2, INITIAL_SWAP_AMOUNT, 0, 0, maxAmount1Out, USER2);
+        emit Swap(USER2, SWAP_INPUT, 0, 0, maxAmount1Out, USER2);
         pair.swap(0, maxAmount1Out, USER2, new bytes(0));
         vm.stopPrank();
     }
@@ -302,18 +302,16 @@ contract UniswapV2PairTest is Test {
     function testSkimWorks() public {
         _firstMint();
 
-        _donate(USER1, INITIAL_SWAP_AMOUNT, INITIAL_SWAP_AMOUNT);
+        _donate(USER1, SWAP_INPUT, SWAP_INPUT);
 
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT);
+        _assertPairBalances(INITIAL_LIQUIDITY + SWAP_INPUT, INITIAL_LIQUIDITY + SWAP_INPUT);
         _assertReserves(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
 
         pair.skim(USER2);
 
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY);
-        assertEq(tokenA.balanceOf(USER2), STARTING_USER_BALANCE + INITIAL_SWAP_AMOUNT);
-        assertEq(tokenB.balanceOf(USER2), STARTING_USER_BALANCE + INITIAL_SWAP_AMOUNT);
+        _assertPairBalances(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
+        assertEq(tokenA.balanceOf(USER2), STARTING_USER_BALANCE + SWAP_INPUT);
+        assertEq(tokenB.balanceOf(USER2), STARTING_USER_BALANCE + SWAP_INPUT);
         _assertReserves(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
         // LP balances doesnt affect
         assertEq(pair.balanceOf(USER1), INITIAL_LIQUIDITY - pair.MINIMUM_LIQUIDITY());
@@ -323,14 +321,12 @@ contract UniswapV2PairTest is Test {
     function testSkimHasNoEffectsWithoutExtraTokens() public {
         _firstMint();
 
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY);
+        _assertPairBalances(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
         _assertReserves(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
 
         pair.skim(USER2);
 
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY);
+        _assertPairBalances(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
         _assertReserves(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
     }
 
@@ -340,37 +336,33 @@ contract UniswapV2PairTest is Test {
     function testSyncWorks() public {
         _firstMint();
 
-        _donate(USER1, INITIAL_SWAP_AMOUNT, INITIAL_SWAP_AMOUNT);
+        _donate(USER1, SWAP_INPUT, SWAP_INPUT);
 
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT);
+        _assertPairBalances(INITIAL_LIQUIDITY + SWAP_INPUT, INITIAL_LIQUIDITY + SWAP_INPUT);
         _assertReserves(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
 
         pair.sync();
 
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT);
-        _assertReserves(INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT, INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT);
+        _assertPairBalances(INITIAL_LIQUIDITY + SWAP_INPUT, INITIAL_LIQUIDITY + SWAP_INPUT);
+        _assertReserves(INITIAL_LIQUIDITY + SWAP_INPUT, INITIAL_LIQUIDITY + SWAP_INPUT);
 
         assertEq(pair.totalSupply(), INITIAL_LIQUIDITY); // sync should never mint or burn LP Tokens
         assertEq(pair.balanceOf(USER1), INITIAL_LIQUIDITY - pair.MINIMUM_LIQUIDITY()); // shouldn't affect LP Balances
         assertEq(pair.balanceOf(USER2), 0);
 
-        assertEq(tokenA.balanceOf(USER1), STARTING_USER_BALANCE - INITIAL_LIQUIDITY - INITIAL_SWAP_AMOUNT); // sync shouldn't transfer anything
-        assertEq(tokenB.balanceOf(USER1), STARTING_USER_BALANCE - INITIAL_LIQUIDITY - INITIAL_SWAP_AMOUNT);
+        assertEq(tokenA.balanceOf(USER1), STARTING_USER_BALANCE - INITIAL_LIQUIDITY - SWAP_INPUT); // sync shouldn't transfer anything
+        assertEq(tokenB.balanceOf(USER1), STARTING_USER_BALANCE - INITIAL_LIQUIDITY - SWAP_INPUT);
     }
 
     function testSyncHasNoEffectsWithoutExtraTokens() public {
         _firstMint();
 
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY);
+        _assertPairBalances(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
         _assertReserves(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
 
         pair.sync();
 
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY);
+        _assertPairBalances(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
         _assertReserves(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
 
         assertEq(pair.totalSupply(), INITIAL_LIQUIDITY); // sync should never mint or burn LP Tokens
@@ -384,15 +376,24 @@ contract UniswapV2PairTest is Test {
     function testSyncEmits() public {
         _firstMint();
 
-        _donate(USER1, INITIAL_SWAP_AMOUNT, INITIAL_SWAP_AMOUNT);
+        _donate(USER1, SWAP_INPUT, SWAP_INPUT);
 
         vm.expectEmit(false, false, false, true, address(pair));
-        emit Sync(uint112(INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT), uint112(INITIAL_LIQUIDITY + INITIAL_SWAP_AMOUNT));
+        emit Sync(uint112(INITIAL_LIQUIDITY + SWAP_INPUT), uint112(INITIAL_LIQUIDITY + SWAP_INPUT));
         pair.sync();
     }
 
+    function testSyncUpdatesPriceAccumulatorsAfterTimeElapsed() public {
+        vm.warp(100);
+
+        pair.sync();
+
+        (,, uint32 blockTimestampLast) = pair.getReserves();
+        assertEq(blockTimestampLast, 100);
+    }
+
     /*//////////////////////////////////////////////////////////////
-                           INTERNAL FUNCTIONS
+                INTERNAL FUNCTIONS in UniswapV2Pair
     //////////////////////////////////////////////////////////////*/
     function testSafeTransferRevertsIfTransferFailed() public {
         MockFailedTransfer badToken = new MockFailedTransfer();
@@ -404,12 +405,22 @@ contract UniswapV2PairTest is Test {
         goodToken.mint(USER1, STARTING_USER_BALANCE);
 
         vm.startPrank(USER1);
-        badToken.transfer(badPair, INITIAL_SWAP_AMOUNT);
-        goodToken.transfer(badPair, INITIAL_SWAP_AMOUNT);
+        badToken.transfer(badPair, SWAP_INPUT);
+        goodToken.transfer(badPair, SWAP_INPUT);
         vm.stopPrank();
 
         vm.expectRevert(IUniswapV2Pair.UniswapV2Pair__TransferFailed.selector);
         UniswapV2Pair(badPair).skim(USER1);
+    }
+
+    function testUpdateReservesRevertsIfBalanceExceedsUint112Max() public {
+        uint256 moreThanUint112Max = uint256(type(uint112).max) + 1;
+        tokenA.mint(USER1, moreThanUint112Max);
+
+        _donate(USER1, moreThanUint112Max, SWAP_INPUT);
+
+        vm.expectRevert(IUniswapV2Pair.UniswapV2Pair__Overflow.selector);
+        pair.sync();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -458,5 +469,10 @@ contract UniswapV2PairTest is Test {
         tokenA.transfer(address(pair), amount0);
         tokenB.transfer(address(pair), amount1);
         vm.stopPrank();
+    }
+
+    function _assertPairBalances(uint256 amount0, uint256 amount1) internal {
+        assertEq(tokenA.balanceOf(address(pair)), amount0);
+        assertEq(tokenB.balanceOf(address(pair)), amount1);
     }
 }
