@@ -469,6 +469,7 @@ contract UniswapV2RouterTest is Test {
         (amountA, amountB) = router.removeLiquidity(
             address(tokenA), address(tokenB), liquidity, AMOUNT_MIN, AMOUNT_MIN, user, block.timestamp
         );
+
         vm.stopPrank();
     }
 }
