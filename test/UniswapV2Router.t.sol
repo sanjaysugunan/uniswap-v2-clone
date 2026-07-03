@@ -22,7 +22,8 @@ contract UniswapV2RouterTest is Test {
     address USER1;
     uint256 USER1_PRIVATE_KEY;
 
-    address USER2 = makeAddr("user2");
+    address USER2;
+    uint256 USER2_PRIVATE_KEY;
 
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD; // to lock token since address(0) throws error in oz's ERC20
     // for permit and signing
@@ -62,6 +63,7 @@ contract UniswapV2RouterTest is Test {
 
     function setUp() public {
         (USER1, USER1_PRIVATE_KEY) = makeAddrAndKey("user1");
+        (USER2, USER2_PRIVATE_KEY) = makeAddrAndKey("user2");
 
         factory = new UniswapV2Factory();
         weth = new WETH9();
@@ -697,6 +699,68 @@ contract UniswapV2RouterTest is Test {
         assertEq(tokenA.balanceOf(address(router)), 0);
         assertEq(tokenB.balanceOf(address(router)), 0);
         assertEq(UniswapV2Pair(pair).balanceOf(address(router)), 0);
+    }
+
+    function testRemoveLiquidityWithPermitApprovesMaxLiquidity() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        // Act
+        (uint256 amountA, uint256 amountB) = _removeLiquidityWithPermit(liquidity, true);
+
+        // Assert returned amounts
+        assertEq(amountA, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+        assertEq(amountB, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        // LP burned
+        assertEq(UniswapV2Pair(pair).balanceOf(USER1), 0);
+
+        // Max allowance should not be decremented by transferFrom
+        assertEq(UniswapV2Pair(pair).allowance(USER1, address(router)), type(uint256).max);
+
+        // Only permanently locked liquidity remains
+        assertEq(UniswapV2Pair(pair).totalSupply(), LOCKED_LIQUIDITY);
+    }
+
+    function testRemoveLiquidityWithPermitRevertsIfDeadlineExpired() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+        uint256 deadline = block.timestamp;
+
+        bytes32 digest = _getPermitDigest(liquidity, deadline);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER1_PRIVATE_KEY, digest);
+
+        vm.warp(deadline + 1);
+
+        // Act
+        vm.expectRevert(IUniswapV2Router.UniswapV2Router__Expired.selector);
+        router.removeLiquidityWithPermit(
+            address(tokenA), address(tokenB), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline, false, v, r, s
+        );
+    }
+
+    function testRemoveLiquidityWithPermitRevertsIfPermitInvalid() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+        uint256 deadline = block.timestamp;
+
+        bytes32 digest = _getPermitDigest(liquidity, deadline);
+
+        // Sign with the WRONG private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER2_PRIVATE_KEY, digest);
+
+        // Act
+        vm.expectRevert();
+        router.removeLiquidityWithPermit(
+            address(tokenA), address(tokenB), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline, false, v, r, s
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
