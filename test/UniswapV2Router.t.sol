@@ -437,6 +437,25 @@ contract UniswapV2RouterTest is Test {
         assertEq(UniswapV2Pair(pair).balanceOf(address(router)), 0);
     }
 
+    function testRemoveLiquidityWorksWithUnsortedTokens() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        // Act
+        (uint256 amountB, uint256 amountA) = _removeLiquidity(USER1, tokenB, tokenA, liquidity);
+
+        // Assert
+        assertEq(amountA, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+        assertEq(amountB, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        assertEq(tokenA.balanceOf(USER1), STARTING_USER_BALANCE - LOCKED_LIQUIDITY);
+        assertEq(tokenB.balanceOf(USER1), STARTING_USER_BALANCE - LOCKED_LIQUIDITY);
+
+        assertEq(UniswapV2Pair(pair).balanceOf(USER1), 0);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
