@@ -595,6 +595,25 @@ contract UniswapV2RouterTest is Test {
         assertEq(address(router).balance, 0);
     }
 
+    function testRemoveLiquidityETHRevertsIfDeadlineExpired() public {
+        // Arrange
+        (address pair,,,) = _addLiquidityETH(USER1, tokenA);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        vm.startPrank(USER1);
+        UniswapV2Pair(pair).approve(address(router), liquidity);
+
+        uint256 deadline = block.timestamp;
+        vm.warp(deadline + 1);
+
+        // Act
+        vm.expectRevert(IUniswapV2Router.UniswapV2Router__Expired.selector);
+        router.removeLiquidityETH(address(tokenA), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline);
+
+        vm.stopPrank();
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
