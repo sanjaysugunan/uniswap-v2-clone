@@ -456,6 +456,37 @@ contract UniswapV2RouterTest is Test {
         assertEq(UniswapV2Pair(pair).balanceOf(USER1), 0);
     }
 
+    function testRemoveLiquidityRemovesPartialLiquidity() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1) / 2;
+
+        // Act
+        (uint256 amountA, uint256 amountB) = _removeLiquidity(USER1, tokenA, tokenB, liquidity);
+
+        // Assert returned amounts
+        assertEq(amountA, liquidity);
+        assertEq(amountB, liquidity);
+
+        // Half of the LP should remain
+        assertEq(UniswapV2Pair(pair).balanceOf(USER1), AMOUNT_DESIRED - LOCKED_LIQUIDITY - liquidity);
+
+        // Total supply decreases by the burned liquidity
+        assertEq(UniswapV2Pair(pair).totalSupply(), AMOUNT_DESIRED - liquidity);
+
+        // User received the redeemed tokens
+        assertEq(tokenA.balanceOf(USER1), STARTING_USER_BALANCE - AMOUNT_DESIRED + amountA);
+
+        assertEq(tokenB.balanceOf(USER1), STARTING_USER_BALANCE - AMOUNT_DESIRED + amountB);
+
+        // Reserves decrease proportionally
+        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
+
+        assertEq(reserve0, AMOUNT_DESIRED - amountA);
+        assertEq(reserve1, AMOUNT_DESIRED - amountB);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
