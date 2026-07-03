@@ -763,6 +763,112 @@ contract UniswapV2RouterTest is Test {
         );
     }
 
+    function testRemoveLiquidityETHWithPermitWorks() public {
+        // Arrange
+        (address pair,,,) = _addLiquidityETH(USER1, tokenA);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        // Act
+        (uint256 amountToken, uint256 amountETH) = _removeLiquidityETHWithPermit(liquidity, false);
+
+        // Assert returned amounts
+        assertEq(amountToken, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+        assertEq(amountETH, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        // User received underlying assets
+        assertEq(tokenA.balanceOf(USER1), STARTING_USER_BALANCE - LOCKED_LIQUIDITY);
+        assertEq(USER1.balance, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        // User should not receive WETH
+        assertEq(weth.balanceOf(USER1), 0);
+
+        // LP burned
+        assertEq(UniswapV2Pair(pair).balanceOf(USER1), 0);
+
+        // Only permanently locked liquidity remains
+        assertEq(UniswapV2Pair(pair).totalSupply(), LOCKED_LIQUIDITY);
+
+        // Reserves updated
+        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
+
+        assertEq(reserve0, LOCKED_LIQUIDITY);
+        assertEq(reserve1, LOCKED_LIQUIDITY);
+
+        // Router should not retain any assets
+        assertEq(tokenA.balanceOf(address(router)), 0);
+        assertEq(weth.balanceOf(address(router)), 0);
+        assertEq(address(router).balance, 0);
+    }
+
+    function testRemoveLiquidityETHWithPermitApprovesMaxLiquidity() public {
+        // Arrange
+        (address pair,,,) = _addLiquidityETH(USER1, tokenA);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        // Act
+        (uint256 amountToken, uint256 amountETH) = _removeLiquidityETHWithPermit(liquidity, true);
+
+        // Assert returned amounts
+        assertEq(amountToken, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+        assertEq(amountETH, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        // LP burned
+        assertEq(UniswapV2Pair(pair).balanceOf(USER1), 0);
+
+        // Max allowance should not be decremented
+        assertEq(UniswapV2Pair(pair).allowance(USER1, address(router)), type(uint256).max);
+
+        // User received underlying assets
+        assertEq(tokenA.balanceOf(USER1), STARTING_USER_BALANCE - LOCKED_LIQUIDITY);
+        assertEq(USER1.balance, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        // Router should not retain assets
+        assertEq(tokenA.balanceOf(address(router)), 0);
+        assertEq(weth.balanceOf(address(router)), 0);
+        assertEq(address(router).balance, 0);
+    }
+
+    function testRemoveLiquidityETHWithPermitRevertsIfDeadlineExpired() public {
+        // Arrange
+        (address pair,,,) = _addLiquidityETH(USER1, tokenA);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+        uint256 deadline = block.timestamp;
+
+        bytes32 digest = _getETHPermitDigest(liquidity, deadline);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER1_PRIVATE_KEY, digest);
+
+        vm.warp(deadline + 1);
+
+        // Act
+        vm.expectRevert(IUniswapV2Router.UniswapV2Router__Expired.selector);
+        router.removeLiquidityETHWithPermit(
+            address(tokenA), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline, false, v, r, s
+        );
+    }
+
+    function testRemoveLiquidityETHWithPermitRevertsIfPermitInvalid() public {
+        // Arrange
+        (address pair,,,) = _addLiquidityETH(USER1, tokenA);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+        uint256 deadline = block.timestamp;
+
+        bytes32 digest = _getETHPermitDigest(liquidity, deadline);
+
+        // Sign with the WRONG private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER2_PRIVATE_KEY, digest);
+
+        // Act
+        vm.expectRevert();
+        router.removeLiquidityETHWithPermit(
+            address(tokenA), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline, false, v, r, s
+        );
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
@@ -891,6 +997,42 @@ contract UniswapV2RouterTest is Test {
         UniswapV2Pair pair;
         {
             pair = UniswapV2Pair(factory.getPair(address(tokenA), address(tokenB)));
+            uint256 nonce = pair.nonces(USER1);
+
+            structHash = keccak256(abi.encode(PERMIT_TYPEHASH, USER1, address(router), value, nonce, deadline));
+        }
+
+        digest = keccak256(abi.encodePacked("\x19\x01", pair.DOMAIN_SEPARATOR(), structHash));
+    }
+
+    function _removeLiquidityETHWithPermit(uint256 liquidity, bool approveMax)
+        internal
+        returns (uint256 amountToken, uint256 amountETH)
+    {
+        uint256 value = approveMax ? type(uint256).max : liquidity;
+        uint256 deadline = block.timestamp;
+
+        (uint8 v, bytes32 r, bytes32 s) = _signETHPermit(value, deadline);
+
+        vm.prank(USER1);
+
+        (amountToken, amountETH) = router.removeLiquidityETHWithPermit(
+            address(tokenA), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline, approveMax, v, r, s
+        );
+    }
+
+    function _signETHPermit(uint256 value, uint256 deadline) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+        bytes32 digest = _getETHPermitDigest(value, deadline);
+
+        (v, r, s) = vm.sign(USER1_PRIVATE_KEY, digest);
+    }
+
+    function _getETHPermitDigest(uint256 value, uint256 deadline) internal view returns (bytes32 digest) {
+        UniswapV2Pair pair = UniswapV2Pair(factory.getPair(address(tokenA), address(weth)));
+
+        bytes32 structHash;
+
+        {
             uint256 nonce = pair.nonces(USER1);
 
             structHash = keccak256(abi.encode(PERMIT_TYPEHASH, USER1, address(router), value, nonce, deadline));
