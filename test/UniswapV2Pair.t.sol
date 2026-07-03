@@ -471,7 +471,7 @@ contract UniswapV2PairTest is Test {
         vm.stopPrank();
     }
 
-    function _assertPairBalances(uint256 amount0, uint256 amount1) internal {
+    function _assertPairBalances(uint256 amount0, uint256 amount1) internal view {
         assertEq(tokenA.balanceOf(address(pair)), amount0);
         assertEq(tokenB.balanceOf(address(pair)), amount1);
     }

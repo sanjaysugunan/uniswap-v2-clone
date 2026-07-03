@@ -330,7 +330,7 @@ contract UniswapV2Router is IUniswapV2Router {
         returns (uint256[] memory amounts)
     {
         if (path[0] != i_WETH) revert UniswapV2Router__InvalidPath();
-        amounts = UniswapV2Library.getAmountsOut(i_factory, amountOut, path);
+        amounts = UniswapV2Library.getAmountsIn(i_factory, amountOut, path);
         if (amounts[0] > msg.value) revert UniswapV2Router__ExcessiveInputAmount();
         IWETH(i_WETH).deposit{value: amounts[0]}();
         if (!IWETH(i_WETH).transfer(UniswapV2Library.pairFor(i_factory, path[0], path[1]), amounts[0])) {

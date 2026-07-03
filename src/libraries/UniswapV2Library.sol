@@ -101,7 +101,7 @@ library UniswapV2Library {
     {
         if (path.length < 2) revert UniswapV2Library__InvalidPath();
         amounts = new uint256[](path.length);
-        amounts[0] = amountOut;
+        amounts[path.length - 1] = amountOut;
         for (uint256 i = path.length - 1; i > 0; i--) {
             (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i - 1], path[i]);
             amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);

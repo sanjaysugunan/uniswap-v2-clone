@@ -17,7 +17,6 @@ contract UniswapV2RouterTest is Test {
 
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
-    ERC20Mock public tokenC;
 
     address USER1;
     uint256 USER1_PRIVATE_KEY;
@@ -35,20 +34,7 @@ contract UniswapV2RouterTest is Test {
     //////////////////////////////////////////////////////////////*/
     uint256 constant STARTING_USER_BALANCE = 100 ether;
 
-    // /*//////////////////////////////////////////////////////////////
-    //                           LIQUIDITY
-    // //////////////////////////////////////////////////////////////*/
-    // uint256 constant INITIAL_LIQUIDITY = 10 ether; // First liquidity added to a pool
-    // uint256 constant SECOND_LIQUIDITY = 5 ether; // Additional balanced liquidity
-    // uint256 constant EXCESS_LIQUIDITY = 20 ether; // Larger-than-existing liquidity
     uint256 constant LOCKED_LIQUIDITY = 10 ** 3; // UniswapV2Pair.MINIMUM_LIQUIDITY()
-
-    // /*//////////////////////////////////////////////////////////////
-    //                              SWAPS
-    // //////////////////////////////////////////////////////////////*/
-    // uint256 constant SWAP_INPUT = 1 ether;
-    // uint256 constant SMALL_SWAP_INPUT = 0.1 ether;
-    // uint256 constant LARGE_SWAP_INPUT = 5 ether;
 
     /*//////////////////////////////////////////////////////////////
                          ROUTER CONSTRAINTS
@@ -71,14 +57,12 @@ contract UniswapV2RouterTest is Test {
 
         tokenA = new ERC20Mock();
         tokenB = new ERC20Mock();
-        tokenC = new ERC20Mock();
 
         for (uint256 i; i < 2; i++) {
             address user = i == 0 ? USER1 : USER2;
 
             tokenA.mint(user, STARTING_USER_BALANCE);
             tokenB.mint(user, STARTING_USER_BALANCE);
-            tokenC.mint(user, STARTING_USER_BALANCE);
         }
     }
 
@@ -868,6 +852,10 @@ contract UniswapV2RouterTest is Test {
             address(tokenA), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline, false, v, r, s
         );
     }
+
+    /*//////////////////////////////////////////////////////////////
+                      SWAP EXACT TOKENS FOR TOKENS
+    //////////////////////////////////////////////////////////////*/
 
     /*//////////////////////////////////////////////////////////////
                                 HELPERS
