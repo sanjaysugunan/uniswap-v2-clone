@@ -165,7 +165,7 @@ contract UniswapV2Router is IUniswapV2Router {
         );
         SafeERC20.safeTransfer(IERC20(token), to, amountToken);
         IWETH(i_WETH).withdraw(amountETH);
-        TransferHelper.safeTransferETH(to, amountToken);
+        TransferHelper.safeTransferETH(to, amountETH);
     }
 
     // to avoid stack too deep errors

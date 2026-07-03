@@ -555,6 +555,47 @@ contract UniswapV2RouterTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          REMOVE LIQUIDITY ETH
+    //////////////////////////////////////////////////////////////*/
+    function testRemoveLiquidityETHWorks() public {
+        // Arrange
+        (address pair,,,) = _addLiquidityETH(USER1, tokenA);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        // Act
+        (uint256 amountToken, uint256 amountETH) = _removeLiquidityETH(USER1, tokenA, liquidity);
+
+        // Assert returned amounts
+        assertEq(amountToken, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+        assertEq(amountETH, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        // User received token and ETH
+        assertEq(tokenA.balanceOf(USER1), STARTING_USER_BALANCE - LOCKED_LIQUIDITY);
+        assertEq(USER1.balance, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        // User should not receive WETH
+        assertEq(weth.balanceOf(USER1), 0);
+
+        // LP tokens burned
+        assertEq(UniswapV2Pair(pair).balanceOf(USER1), 0);
+
+        // Only permanently locked liquidity remains
+        assertEq(UniswapV2Pair(pair).totalSupply(), LOCKED_LIQUIDITY);
+
+        // Reserves equal locked liquidity
+        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
+
+        assertEq(reserve0, LOCKED_LIQUIDITY);
+        assertEq(reserve1, LOCKED_LIQUIDITY);
+
+        // Router should never retain assets
+        assertEq(tokenA.balanceOf(address(router)), 0);
+        assertEq(weth.balanceOf(address(router)), 0);
+        assertEq(address(router).balance, 0);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
     function _addLiquidity(address user, ERC20Mock token0, ERC20Mock token1)
@@ -628,8 +669,19 @@ contract UniswapV2RouterTest is Test {
         vm.stopPrank();
     }
 
-    function _approveLP(address user, address pair, uint256 liquidity) internal {
-        vm.prank(user);
-        UniswapV2Pair(pair).approve(address(router), liquidity);
+    function _removeLiquidityETH(address user, ERC20Mock token, uint256 liquidity)
+        internal
+        returns (uint256 amountToken, uint256 amountETH)
+    {
+        UniswapV2Pair pair = UniswapV2Pair(factory.getPair(address(token), address(weth)));
+
+        vm.startPrank(user);
+
+        pair.approve(address(router), liquidity);
+
+        (amountToken, amountETH) =
+            router.removeLiquidityETH(address(token), liquidity, AMOUNT_MIN, AMOUNT_MIN, user, block.timestamp);
+
+        vm.stopPrank();
     }
 }
