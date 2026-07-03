@@ -493,7 +493,8 @@ contract UniswapV2RouterTest is Test {
 
         uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
 
-        _approveLP(USER1, pair, liquidity);
+        vm.startPrank(USER1);
+        UniswapV2Pair(pair).approve(address(router), liquidity);
 
         uint256 deadline = block.timestamp;
         vm.warp(deadline + 1);
@@ -501,6 +502,30 @@ contract UniswapV2RouterTest is Test {
         // Act
         vm.expectRevert(IUniswapV2Router.UniswapV2Router__Expired.selector);
         router.removeLiquidity(address(tokenA), address(tokenB), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline);
+
+        vm.stopPrank();
+    }
+
+    function testRemoveLiquidityRevertsIfInsufficientAmountA() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        vm.startPrank(USER1);
+        UniswapV2Pair(pair).approve(address(router), liquidity);
+
+        // Act
+        vm.expectRevert(IUniswapV2Router.UniswapV2Router__InsufficientAmountA.selector);
+        router.removeLiquidity(
+            address(tokenA),
+            address(tokenB),
+            liquidity,
+            AMOUNT_DESIRED, // greater than actual amount returned
+            AMOUNT_MIN,
+            USER1,
+            block.timestamp
+        );
 
         vm.stopPrank();
     }
