@@ -530,6 +530,30 @@ contract UniswapV2RouterTest is Test {
         vm.stopPrank();
     }
 
+    function testRemoveLiquidityRevertsIfInsufficientAmountB() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        vm.startPrank(USER1);
+        UniswapV2Pair(pair).approve(address(router), liquidity);
+
+        // Act
+        vm.expectRevert(IUniswapV2Router.UniswapV2Router__InsufficientAmountB.selector);
+        router.removeLiquidity(
+            address(tokenA),
+            address(tokenB),
+            liquidity,
+            AMOUNT_MIN,
+            AMOUNT_DESIRED, // greater than actual amount returned
+            USER1,
+            block.timestamp
+        );
+
+        vm.stopPrank();
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
