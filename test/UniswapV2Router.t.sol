@@ -19,30 +19,35 @@ contract UniswapV2RouterTest is Test {
     ERC20Mock public tokenB;
     ERC20Mock public tokenC;
 
-    address USER1 = makeAddr("user1");
+    address USER1;
+    uint256 USER1_PRIVATE_KEY;
+
     address USER2 = makeAddr("user2");
 
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD; // to lock token since address(0) throws error in oz's ERC20
+    // for permit and signing
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     /*//////////////////////////////////////////////////////////////
                                 USERS
     //////////////////////////////////////////////////////////////*/
     uint256 constant STARTING_USER_BALANCE = 100 ether;
 
-    /*//////////////////////////////////////////////////////////////
-                              LIQUIDITY
-    //////////////////////////////////////////////////////////////*/
-    uint256 constant INITIAL_LIQUIDITY = 10 ether; // First liquidity added to a pool
-    uint256 constant SECOND_LIQUIDITY = 5 ether; // Additional balanced liquidity
-    uint256 constant EXCESS_LIQUIDITY = 20 ether; // Larger-than-existing liquidity
+    // /*//////////////////////////////////////////////////////////////
+    //                           LIQUIDITY
+    // //////////////////////////////////////////////////////////////*/
+    // uint256 constant INITIAL_LIQUIDITY = 10 ether; // First liquidity added to a pool
+    // uint256 constant SECOND_LIQUIDITY = 5 ether; // Additional balanced liquidity
+    // uint256 constant EXCESS_LIQUIDITY = 20 ether; // Larger-than-existing liquidity
     uint256 constant LOCKED_LIQUIDITY = 10 ** 3; // UniswapV2Pair.MINIMUM_LIQUIDITY()
 
-    /*//////////////////////////////////////////////////////////////
-                                 SWAPS
-    //////////////////////////////////////////////////////////////*/
-    uint256 constant SWAP_INPUT = 1 ether;
-    uint256 constant SMALL_SWAP_INPUT = 0.1 ether;
-    uint256 constant LARGE_SWAP_INPUT = 5 ether;
+    // /*//////////////////////////////////////////////////////////////
+    //                              SWAPS
+    // //////////////////////////////////////////////////////////////*/
+    // uint256 constant SWAP_INPUT = 1 ether;
+    // uint256 constant SMALL_SWAP_INPUT = 0.1 ether;
+    // uint256 constant LARGE_SWAP_INPUT = 5 ether;
 
     /*//////////////////////////////////////////////////////////////
                          ROUTER CONSTRAINTS
@@ -55,13 +60,9 @@ contract UniswapV2RouterTest is Test {
     uint256 constant STRICT_AMOUNT_MIN = 10 ether;
     uint256 constant IMPOSSIBLE_AMOUNT_MIN = 11 ether;
 
-    /*//////////////////////////////////////////////////////////////
-                               DEADLINES
-    //////////////////////////////////////////////////////////////*/
-    uint256 constant VALID_DEADLINE = type(uint256).max;
-    uint256 constant EXPIRED_DEADLINE = 0;
-
     function setUp() public {
+        (USER1, USER1_PRIVATE_KEY) = makeAddrAndKey("user1");
+
         factory = new UniswapV2Factory();
         weth = new WETH9();
         router = new UniswapV2Router(address(factory), address(weth));
@@ -637,6 +638,67 @@ contract UniswapV2RouterTest is Test {
         vm.stopPrank();
     }
 
+    function testRemoveLiquidityETHRevertsIfInsufficientETHAmount() public {
+        // Arrange
+        (address pair,,,) = _addLiquidityETH(USER1, tokenA);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        vm.startPrank(USER1);
+        UniswapV2Pair(pair).approve(address(router), liquidity);
+
+        // Act
+        vm.expectRevert(IUniswapV2Router.UniswapV2Router__InsufficientAmountB.selector);
+        router.removeLiquidityETH(
+            address(tokenA),
+            liquidity,
+            AMOUNT_MIN,
+            AMOUNT_DESIRED, // greater than actual ETH amount returned
+            USER1,
+            block.timestamp
+        );
+
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                      REMOVE LIQUIDITY WITH PERMIT
+    //////////////////////////////////////////////////////////////*/
+    function testRemoveLiquidityWithPermitWorks() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        // Act
+        (uint256 amountA, uint256 amountB) = _removeLiquidityWithPermit(liquidity, false);
+
+        // Assert returned amounts
+        assertEq(amountA, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+        assertEq(amountB, AMOUNT_DESIRED - LOCKED_LIQUIDITY);
+
+        // LP burned
+        assertEq(UniswapV2Pair(pair).balanceOf(USER1), 0);
+
+        // User received underlying assets
+        assertEq(tokenA.balanceOf(USER1), STARTING_USER_BALANCE - LOCKED_LIQUIDITY);
+        assertEq(tokenB.balanceOf(USER1), STARTING_USER_BALANCE - LOCKED_LIQUIDITY);
+
+        // Only permanently locked liquidity remains
+        assertEq(UniswapV2Pair(pair).totalSupply(), LOCKED_LIQUIDITY);
+
+        // Reserves updated
+        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
+
+        assertEq(reserve0, LOCKED_LIQUIDITY);
+        assertEq(reserve1, LOCKED_LIQUIDITY);
+
+        // Router should not retain any assets
+        assertEq(tokenA.balanceOf(address(router)), 0);
+        assertEq(tokenB.balanceOf(address(router)), 0);
+        assertEq(UniswapV2Pair(pair).balanceOf(address(router)), 0);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
@@ -725,5 +787,51 @@ contract UniswapV2RouterTest is Test {
             router.removeLiquidityETH(address(token), liquidity, AMOUNT_MIN, AMOUNT_MIN, user, block.timestamp);
 
         vm.stopPrank();
+    }
+
+    // so the user in this helper is harcoded to USER1, to avoid stack too deep errors
+    // and its tokenA and tokenB are also hardcoded to the test's tokenA and tokenB, to avoid stack too deep errors
+    function _removeLiquidityWithPermit(uint256 liquidity, bool approveMax)
+        internal
+        returns (uint256 amountA, uint256 amountB)
+    {
+        uint256 value = approveMax ? type(uint256).max : liquidity;
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(value);
+
+        vm.prank(USER1);
+
+        (amountA, amountB) = router.removeLiquidityWithPermit(
+            address(tokenA),
+            address(tokenB),
+            liquidity,
+            AMOUNT_MIN,
+            AMOUNT_MIN,
+            USER1,
+            block.timestamp,
+            approveMax,
+            v,
+            r,
+            s
+        );
+    }
+
+    function _signPermit(uint256 value) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+        bytes32 digest = _getPermitDigest(value, block.timestamp);
+
+        (v, r, s) = vm.sign(USER1_PRIVATE_KEY, digest);
+    }
+
+    function _getPermitDigest(uint256 value, uint256 deadline) internal view returns (bytes32 digest) {
+        bytes32 structHash;
+        UniswapV2Pair pair;
+        {
+            pair = UniswapV2Pair(factory.getPair(address(tokenA), address(tokenB)));
+            uint256 nonce = pair.nonces(USER1);
+
+            structHash = keccak256(abi.encode(PERMIT_TYPEHASH, USER1, address(router), value, nonce, deadline));
+        }
+
+        digest = keccak256(abi.encodePacked("\x19\x01", pair.DOMAIN_SEPARATOR(), structHash));
     }
 }
