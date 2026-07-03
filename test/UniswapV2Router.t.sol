@@ -487,6 +487,24 @@ contract UniswapV2RouterTest is Test {
         assertEq(reserve1, AMOUNT_DESIRED - amountB);
     }
 
+    function testRemoveLiquidityRevertsIfDeadlineExpired() public {
+        // Arrange
+        (address pair,,,) = _addLiquidity(USER1, tokenA, tokenB);
+
+        uint256 liquidity = UniswapV2Pair(pair).balanceOf(USER1);
+
+        _approveLP(USER1, pair, liquidity);
+
+        uint256 deadline = block.timestamp;
+        vm.warp(deadline + 1);
+
+        // Act
+        vm.expectRevert(IUniswapV2Router.UniswapV2Router__Expired.selector);
+        router.removeLiquidity(address(tokenA), address(tokenB), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline);
+
+        vm.stopPrank();
+    }
+
     /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
@@ -561,8 +579,8 @@ contract UniswapV2RouterTest is Test {
         vm.stopPrank();
     }
 
-    function _approveLP(address user, UniswapV2Pair pair, uint256 liquidity) internal {
+    function _approveLP(address user, address pair, uint256 liquidity) internal {
         vm.prank(user);
-        pair.approve(address(router), liquidity);
+        UniswapV2Pair(pair).approve(address(router), liquidity);
     }
 }
