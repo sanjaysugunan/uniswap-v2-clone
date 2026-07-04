@@ -7,7 +7,7 @@
 <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=2800&pause=800&color=FF007A&center=true&vCenter=true&width=560&lines=x+*+y+%3D+k;Factory+%C2%B7+Pair+%C2%B7+Router+%C2%B7+LP+Token;Unit.+Fuzzed.+Invariant-tested.+Done." alt="Typing SVG" />
 
 [![Foundry](https://img.shields.io/badge/built%20with-Foundry-orange?style=flat-square)](https://book.getfoundry.sh/)
-[![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.20-363636?style=flat-square&logo=solidity)](https://soliditylang.org/)
+[![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.24-363636?style=flat-square&logo=solidity)](https://soliditylang.org/)
 [![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-4E5EE4?style=flat-square&logo=openzeppelin&logoColor=white)](https://openzeppelin.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
 [![Status](https://img.shields.io/badge/status-complete-brightgreen?style=flat-square)](#-testing-strategy)
@@ -26,17 +26,17 @@ A from-scratch, line-by-line reimplementation of Uniswap V2 — not a fork, not 
 
 ```
                                   createPair()
-                    ┌──────────────┐ ───────────▶ ┌──────────────────┐
-   User / LP  ────▶ │   Router      │              │    Factory        │
-   (swaps,          │  (periphery)  │◀────────────│    (core,          │
-    add/remove       │               │  getPair    │     CREATE2)       │
-    liquidity)       └──────┬────────┘              └─────────┬──────────┘
-                             │                                  │ deployPair
-                             │ uses                             ▼
-                             │                        ┌──────────────────────┐
-                             │                        │  Pair (TokenA/TokenB) │
-                             └───────────────────────▶│  reserves + LP token  │
-                                                        └──────────────────────┘
+                    ┌──────────────┐ ───────────▶   ┌────────────────┐
+   User / LP  ────▶ │   Router     │                │    Factory     │
+   (swaps,          │  (periphery) │◀────────────   │    (core,      │
+    add/remove      │              │  getPair       │     CREATE     │
+    liquidity)      └──────┬───────┘                └─────────┬──────┘
+                           │                                  │ deployPair
+                           │ uses                             ▼
+                           │                        ┌──────────────────────┐
+                           │                        │  Pair (TokenA/TokenB)│
+                           └───────────────────────▶│  reserves + LP token │
+                                                    └──────────────────────┘
 
                     Libraries: UniswapV2Library (pure math) · TransferHelper (safe transfers) · UQ112x112 (fixed-point) · Math (min/sqrt)
 ```
