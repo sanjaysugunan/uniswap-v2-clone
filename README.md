@@ -2,73 +2,116 @@
 
 # 🦄 Uniswap V2 Clone
 
-**A from-scratch implementation of the Uniswap V2 protocol — built with Solidity & Foundry.**
+**A production-style implementation of the Uniswap V2 AMM protocol — built from scratch with Solidity & Foundry.**
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=2800&pause=800&color=FF007A&center=true&vCenter=true&width=560&lines=x+*+y+%3D+k;Factory+%C2%B7+Pair+%C2%B7+Router+%C2%B7+LP+Token;Fuzzed.+Invariant-tested.+From+scratch." alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=2800&pause=800&color=FF007A&center=true&vCenter=true&width=560&lines=x+*+y+%3D+k;Factory+%C2%B7+Pair+%C2%B7+Router+%C2%B7+LP+Token;Unit.+Fuzzed.+Invariant-tested.+Done." alt="Typing SVG" />
 
 [![Foundry](https://img.shields.io/badge/built%20with-Foundry-orange?style=flat-square)](https://book.getfoundry.sh/)
-[![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.24-363636?style=flat-square&logo=solidity)](https://soliditylang.org/)
+[![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.20-363636?style=flat-square&logo=solidity)](https://soliditylang.org/)
 [![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-4E5EE4?style=flat-square&logo=openzeppelin&logoColor=white)](https://openzeppelin.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
-[![Status](https://img.shields.io/badge/status-work%20in%20progress-yellow?style=flat-square)](#roadmap)
+[![Status](https://img.shields.io/badge/status-complete-brightgreen?style=flat-square)](#-testing-strategy)
 
 </div>
 
 ---
 
-This is a learning-focused, **production-style** reimplementation of the Uniswap V2 core contracts, built line by line rather than copied. The goal isn't to ship a fork — it's to understand *every* design decision: why reserves are packed the way they are, why the protocol uses `UQ112x112` fixed-point math, why `MINIMUM_LIQUIDITY` exists, and what actually happens on-chain when you swap.
+A from-scratch, line-by-line reimplementation of Uniswap V2 — not a fork, not a copy-paste of the audited source. The goal was to understand *every* design decision in the protocol: why reserves are packed into a single storage slot, why `UQ112x112` fixed-point math exists, why `MINIMUM_LIQUIDITY` gets burned forever, and exactly what happens on-chain, byte by byte, when a swap executes.
 
-> 🚧 **Status:** Work in Progress — core AMM is fully functional, fuzz/invariant/integration test suites and flash swaps are in active development.
-
----
-
-## 🎯 Goals
-
-- 🔨 Build Uniswap V2 completely from scratch — no copy-pasting core logic
-- 🧠 Understand every design decision in the protocol, not just replicate it
-- ✨ Write production-quality, gas-conscious Solidity
-- 🧪 Back it with comprehensive Foundry unit, fuzz, and invariant tests
-- 🗂️ Keep the codebase clean, modular, and well documented
+**Factory · Pair · Router · LP Token · Libraries — all built, all tested (unit + fuzz + invariant).**
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture Overview
 
 ```
-                    createPair()
-   ┌──────────────┐ ───────────▶ ┌──────────────────┐
-   │   Factory    │              │   Pair (per token│
-   │  (CREATE2    │◀───────────  │   pair, holds    │
-   │   deployer)  │  registry    │   reserves + LP) │
-   └──────────────┘              └──────────┬───────┘
-                                            │ mint / burn / swap
-                                            ▼
-                                  ┌──────────────────────┐
-                                  │       Router         │
-                                  │  (user-facing entry: │
-                                  │  addLiquidity, swap, │
-                                  │  removeLiquidity)    │
-                                  └──────────────────────┘
+                                  createPair()
+                    ┌──────────────┐ ───────────▶ ┌──────────────────┐
+   User / LP  ────▶ │   Router      │              │    Factory        │
+   (swaps,          │  (periphery)  │◀────────────│    (core,          │
+    add/remove       │               │  getPair    │     CREATE2)       │
+    liquidity)       └──────┬────────┘              └─────────┬──────────┘
+                             │                                  │ deployPair
+                             │ uses                             ▼
+                             │                        ┌──────────────────────┐
+                             │                        │  Pair (TokenA/TokenB) │
+                             └───────────────────────▶│  reserves + LP token  │
+                                                        └──────────────────────┘
+
+                    Libraries: UniswapV2Library (pure math) · TransferHelper (safe transfers) · UQ112x112 (fixed-point) · Math (min/sqrt)
 ```
 
-Every `Pair` is an ERC-20 LP token *and* an AMM in one contract — deployed deterministically via `CREATE2` from the `Factory`, so any pair's address can be computed off-chain without a lookup.
+Every `Pair` is simultaneously an **AMM** and an **ERC-20 LP token** — deployed deterministically via `CREATE2` from the `Factory`, so any pair's address is computable off-chain with zero lookups.
 
 ---
 
-## 🧰 Tech Stack
+## 🔄 Core Protocol Flows
 
-<div align="center">
+<table>
+<tr>
+<td valign="top" width="33%">
 
-![Solidity](https://img.shields.io/badge/Solidity-363636?style=for-the-badge&logo=solidity&logoColor=white)
-![Foundry](https://img.shields.io/badge/Foundry-000000?style=for-the-badge&logo=ethereum&logoColor=white)
-![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-4E5EE4?style=for-the-badge&logo=openzeppelin&logoColor=white)
+**1. Add Liquidity**
+```
+User
+ ├─ TokenA ─┐
+ └─ TokenB ─┤
+            ▼
+         Router
+            ▼
+     Pair(A/B) ── mints LP
+```
 
-</div>
+</td>
+<td valign="top" width="33%">
 
-- **Solidity** v0.8.24+
-- **Foundry** (forge, cast, anvil)
-- **OpenZeppelin** contracts
-- **Forge Standard Library**
+**2. Swap**
+```
+User
+  ▼
+Token In
+  ▼
+Router
+  ▼
+Pair(A/B)
+  ▼
+Token Out
+```
+
+</td>
+<td valign="top" width="33%">
+
+**3. Remove Liquidity**
+```
+User
+  ▼
+LP Tokens ── burns
+  ▼
+Router
+  ▼
+Pair(A/B)
+  ▼
+TokenA + TokenB
+```
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🧩 Key Components
+
+| Component | Responsibility |
+|---|---|
+| **`UniswapV2Factory`** | Creates trading pairs via `CREATE2`, maps `token ⇒ token ⇒ pair`, emits `PairCreated` |
+| **`UniswapV2Pair`** | Holds reserves, mints/burns LP tokens, executes swaps under `x·y=k`, tracks cumulative prices for TWAP |
+| **`UniswapV2ERC20`** | The LP token itself — permit-enabled ERC-20 |
+| **`UniswapV2Router`** | User-facing entry point: add/remove liquidity, exact-in/exact-out swaps, multi-hop routing |
+| **`UniswapV2Library`** | Pure math — `quote`, `getAmountOut`, `getAmountIn`, `pairFor` (CREATE2 address derivation) |
+| **`TransferHelper`** | Safe ERC-20/ETH transfers that don't trust return values |
+| **`UQ112x112`** | Fixed-point math for reserve/price accumulator packing |
+| **`Math`** | `min`, `sqrt` — used in LP minting math (Uniswap's `sqrt(x*y)` initial mint) |
 
 ---
 
@@ -78,29 +121,50 @@ Every `Pair` is an ERC-20 LP token *and* an AMM in one contract — deployed det
 .
 ├── src
 │   ├── core
-│   │   ├── UniswapV2ERC20.sol
 │   │   ├── UniswapV2Factory.sol
-│   │   └── UniswapV2Pair.sol
+│   │   ├── UniswapV2Pair.sol
+│   │   └── UniswapV2ERC20.sol
 │   ├── interfaces
 │   │   ├── IUniswapV2Callee.sol
-│   │   ├── IUniswapV2ERC20.sol
 │   │   ├── IUniswapV2Factory.sol
 │   │   ├── IUniswapV2Pair.sol
-│   │   └── IUniswapV2Router.sol
+│   │   ├── IUniswapV2Router.sol
+│   │   └── IWETH.sol
 │   ├── libraries
+│   │   ├── Math.sol
+│   │   ├── UQ112x112.sol
 │   │   ├── TransferHelper.sol
-│   │   ├── UniswapV2Library.sol
-│   │   └── UQ112x112.sol
+│   │   └── UniswapV2Library.sol
 │   └── periphery
 │       └── UniswapV2Router.sol
+├── script
+│   ├── DeployUniswapV2.s.sol
+│   ├── HelperConfig.s.sol
+│   └── interactions
+│       ├── Interactions.s.sol
+│       ├── AddLiquidity.s.sol
+│       ├── RemoveLiquidity.s.sol
+│       └── Swap.s.sol
 ├── test
 │   ├── unit
 │   │   ├── UniswapV2Factory.t.sol
 │   │   ├── UniswapV2Pair.t.sol
-│   │   └── UniswapV2Router.t.sol
+│   │   ├── UniswapV2RouterLiquidity.t.sol
+│   │   └── UniswapV2RouterSwap.t.sol
 │   ├── fuzz
-│   └── invariant
-└── script
+│   │   ├── UniswapV2FactoryFuzz.t.sol
+│   │   ├── UniswapV2PairFuzz.t.sol
+│   │   └── UniswapV2RouterFuzz.t.sol
+│   ├── invariant
+│   │   ├── Handler.t.sol
+│   │   └── UniswapV2Invariant.t.sol
+│   └── mocks
+│       ├── WETH9.sol
+│       └── MockFailedTransfer.sol
+└── lib
+    ├── forge-std
+    ├── openzeppelin-contracts
+    └── foundry-devops
 ```
 
 ---
@@ -127,16 +191,16 @@ Every `Pair` is an ERC-20 LP token *and* an AMM in one contract — deployed det
 - [x] Swap
 - [x] Skim
 - [x] Sync
-- [x] Price accumulator updates
+- [x] Price accumulator updates (TWAP)
 
 </td>
 <td valign="top" width="33%">
 
 **Testing**
 - [x] Unit tests
-- [ ] Fuzz tests
-- [ ] Invariant tests
-- [ ] Integration tests
+- [x] Fuzz tests
+- [x] Invariant tests
+- [x] Deployment & interaction scripts
 
 </td>
 </tr>
@@ -149,71 +213,89 @@ Every `Pair` is an ERC-20 LP token *and* an AMM in one contract — deployed det
 The entire protocol's solvency rests on one line:
 
 ```solidity
-// k must never decrease across any swap
+// k must never decrease across any sequence of swaps or liquidity events
 assert(reserve0 * reserve1 >= k);
 ```
 
-This is what the invariant test suite (in progress) is built to hammer on — randomized sequences of swaps and liquidity events, checking `k` holds under every path.
+The `invariant/` suite (`Handler.t.sol` + `UniswapV2Invariant.t.sol`) drives randomized sequences of adds, removes, and swaps across the system and asserts this holds every time — alongside checks like *the Router never holds a dangling token balance* and *LP token supply always reconciles with underlying reserves*.
 
 ---
 
-## 🚀 Running It
+## 📐 Constant Product Formula
+
+$$x \times y = k$$
+
+Where `x` = reserve of token0, `y` = reserve of token1, `k` = constant (up only, modulo fees). Every swap pays a **0.30% (30 bps)** fee, taken out of the input amount before the constant-product math is applied — which is exactly why `k` trends upward over time instead of staying perfectly flat.
+
+---
+
+## 🧪 Testing Strategy
+
+| Layer | Coverage |
+|---|---|
+| **Unit** | Factory pair creation, Pair mint/burn/swap accounting, Router liquidity & swap paths |
+| **Fuzz** | Factory, Pair, and Router functions fuzzed across randomized amounts, reserves, and edge-case inputs |
+| **Invariant** | `k` never decreases · reserves always match token balances · Router never holds assets · LP token accounting stays consistent |
+| **Mocks** | `WETH9` for ETH-wrapping paths, `MockFailedTransfer` for testing non-standard/failing ERC-20 behavior |
 
 ```bash
-# Clone the repo
-git clone https://github.com/sanjaysugunan/uniswap-v2-clone.git
-cd uniswap-v2-clone
-
-# Install dependencies
-forge install
-
-# Build
-forge build
-
-# Run all tests
-forge test
-
-# Verbose traces
-forge test -vvvv
-
-# Coverage
-forge coverage
+forge test              # run everything
+forge test -vvvv        # verbose traces
+forge coverage          # coverage report
 ```
 
 ---
 
-## 🗺️ Roadmap
+## 🚀 Getting Started
 
-- [x] Complete Router
-- [x] Library
-- [ ] Flash Swaps
-- [ ] Integration Tests
-- [ ] Invariant Testing
-- [ ] Documentation improvements
-- [ ] Gas optimizations
-- [ ] Deployment scripts
+**1. Prerequisites** — [Foundry](https://book.getfoundry.sh/getting-started/installation) installed.
+
+**2. Clone & install**
+```bash
+git clone https://github.com/sanjaysugunan/uniswap-v2-clone.git
+cd uniswap-v2-clone
+forge install
+```
+
+**3. Build**
+```bash
+forge build
+```
+
+**4. Test**
+```bash
+forge test
+```
+
+**5. Deploy locally (Anvil)**
+```bash
+anvil
+forge script script/DeployUniswapV2.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+```
+
+**6. Interact**
+```bash
+forge script script/interactions/Interactions.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+```
 
 ---
 
-## 🧠 What I've Learned
+## 🧠 What I Learned Building This
 
-Building this from scratch (rather than reading the source and moving on) forced a real understanding of:
-
-- `CREATE2` deterministic deployment
-- Constant product AMMs (`x·y=k`)
-- Liquidity minting and burning mechanics
-- LP token accounting & `MINIMUM_LIQUIDITY` bootstrapping
-- Swap fee mechanics (the 0.3% fee, in the math)
-- Reserve synchronization (`sync` / `skim`)
-- Price accumulators & TWAP oracle design
-- Solidity gas optimizations (packed storage, `UQ112x112` fixed-point math)
-- Foundry testing methodology — unit, fuzz, and invariant
+- `CREATE2` deterministic deployment & off-chain address derivation
+- Constant product AMMs (`x·y=k`) and why fees make `k` monotonically increase
+- Liquidity minting/burning math, including `MINIMUM_LIQUIDITY` bootstrapping against the zero address
+- LP token accounting and `sqrt(x*y)` initial share pricing
+- Reserve synchronization (`sync`/`skim`) for handling direct token transfers into a pair
+- Price accumulators and TWAP oracle design
+- Solidity gas optimizations — packed storage slots, `UQ112x112` fixed-point math
+- Foundry methodology end to end: unit → fuzz → stateful invariant testing
 
 ---
 
 ## 📝 Notes
 
-This is **not** intended for production deployment. It's written primarily for educational purposes, while following production-quality engineering practices wherever possible — real tests, real gas-consciousness, real documentation.
+This is **not** intended for production deployment or to hold real funds — it has not been audited. It's built for educational depth, following production-quality engineering practices (tests, gas-consciousness, documentation) wherever it made sense to.
 
 ---
 
@@ -232,5 +314,5 @@ MIT
 ---
 
 <div align="center">
-<sub>Built by <a href="https://github.com/sanjaysugunan">Sanjay Sugunan</a> · <a href="https://x.com/s4njyy">@s4njyy</a></sub>
+<sub>⭐ Star this repo if you found it useful · Built by <a href="https://github.com/sanjaysugunan">Sanjay Sugunan</a> · <a href="https://x.com/s4njyy">@s4njyy</a></sub>
 </div>

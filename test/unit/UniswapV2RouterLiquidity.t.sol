@@ -11,7 +11,7 @@ import {DeployUniswapV2} from "script/DeployUniswapV2.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {WETH9} from "../mocks/WETH9.sol";
 
-contract UniswapV2RouterTest is Test {
+contract UniswapV2RouterLiquidityTest is Test {
     DeployUniswapV2 public deployer;
     UniswapV2Factory public factory;
     UniswapV2Router public router;
