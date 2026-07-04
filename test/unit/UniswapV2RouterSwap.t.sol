@@ -7,14 +7,17 @@ import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
 import {UniswapV2Router} from "src/periphery/UniswapV2Router.sol";
 import {IUniswapV2Router} from "src/interfaces/IUniswapV2Router.sol";
 import {UniswapV2Library} from "src/libraries/UniswapV2Library.sol";
+import {DeployUniswapV2} from "script/DeployUniswapV2.s.sol";
 
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
-import {WETH9} from "./mocks/WETH9.sol";
+import {WETH9} from "../mocks/WETH9.sol";
 
 contract UniswapV2RouterSwapTest is Test {
+    DeployUniswapV2 public deployer;
     UniswapV2Factory public factory;
     UniswapV2Router public router;
     WETH9 public weth;
+    address public wethAddress;
 
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
@@ -47,9 +50,9 @@ contract UniswapV2RouterSwapTest is Test {
     uint256 constant IMPOSSIBLE_AMOUNT_OUT = type(uint256).max;
 
     function setUp() public {
-        factory = new UniswapV2Factory();
-        weth = new WETH9();
-        router = new UniswapV2Router(address(factory), address(weth));
+        deployer = new DeployUniswapV2();
+        (factory, router, wethAddress) = deployer.run();
+        weth = WETH9(payable(wethAddress));
 
         tokenA = new ERC20Mock();
         tokenB = new ERC20Mock();

@@ -7,7 +7,7 @@ import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
-import {MockFailedTransfer} from "./mocks/MockFailedTransfer.sol";
+import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
 
 contract UniswapV2PairTest is Test {
     UniswapV2Factory public factory;
