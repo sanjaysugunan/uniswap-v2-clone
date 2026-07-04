@@ -38,7 +38,7 @@ A from-scratch, line-by-line reimplementation of Uniswap V2 — not a fork, not 
                            └───────────────────────▶│  reserves + LP token │
                                                     └──────────────────────┘
 
-                    Libraries: UniswapV2Library (pure math) · TransferHelper (safe transfers) · UQ112x112 (fixed-point) · Math (min/sqrt)
+    Libraries: UniswapV2Library (pure math) · TransferHelper (safe transfers) · UQ112x112 (fixed-point) · Math (min/sqrt)
 ```
 
 Every `Pair` is simultaneously an **AMM** and an **ERC-20 LP token** — deployed deterministically via `CREATE2` from the `Factory`, so any pair's address is computable off-chain with zero lookups.
