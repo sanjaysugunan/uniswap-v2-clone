@@ -7,9 +7,9 @@ import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
 import {UniswapV2Router} from "src/periphery/UniswapV2Router.sol";
 import {IUniswapV2Router} from "src/interfaces/IUniswapV2Router.sol";
 import {DeployUniswapV2} from "script/DeployUniswapV2.s.sol";
-
-import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {WETH9} from "../mocks/WETH9.sol";
+// Oz imports
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 contract UniswapV2RouterLiquidityTest is Test {
     DeployUniswapV2 public deployer;
@@ -416,10 +416,7 @@ contract UniswapV2RouterLiquidityTest is Test {
         assertEq(UniswapV2Pair(pair).totalSupply(), LOCKED_LIQUIDITY);
 
         // Reserves equal locked liquidity
-        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
-
-        assertEq(reserve0, LOCKED_LIQUIDITY);
-        assertEq(reserve1, LOCKED_LIQUIDITY);
+        _assertReserves(pair, LOCKED_LIQUIDITY, LOCKED_LIQUIDITY);
 
         // Router should never retain assets
         assertEq(tokenA.balanceOf(address(router)), 0);
@@ -471,10 +468,7 @@ contract UniswapV2RouterLiquidityTest is Test {
         assertEq(tokenB.balanceOf(USER1), STARTING_USER_BALANCE - AMOUNT_DESIRED + amountB);
 
         // Reserves decrease proportionally
-        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
-
-        assertEq(reserve0, AMOUNT_DESIRED - amountA);
-        assertEq(reserve1, AMOUNT_DESIRED - amountB);
+        _assertReserves(pair, AMOUNT_DESIRED - amountA, AMOUNT_DESIRED - amountB);
     }
 
     function testRemoveLiquidityRevertsIfDeadlineExpired() public {
@@ -574,10 +568,7 @@ contract UniswapV2RouterLiquidityTest is Test {
         assertEq(UniswapV2Pair(pair).totalSupply(), LOCKED_LIQUIDITY);
 
         // Reserves equal locked liquidity
-        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
-
-        assertEq(reserve0, LOCKED_LIQUIDITY);
-        assertEq(reserve1, LOCKED_LIQUIDITY);
+        _assertReserves(pair, LOCKED_LIQUIDITY, LOCKED_LIQUIDITY);
 
         // Router should never retain assets
         assertEq(tokenA.balanceOf(address(router)), 0);
@@ -677,10 +668,7 @@ contract UniswapV2RouterLiquidityTest is Test {
         assertEq(UniswapV2Pair(pair).totalSupply(), LOCKED_LIQUIDITY);
 
         // Reserves updated
-        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
-
-        assertEq(reserve0, LOCKED_LIQUIDITY);
-        assertEq(reserve1, LOCKED_LIQUIDITY);
+        _assertReserves(pair, LOCKED_LIQUIDITY, LOCKED_LIQUIDITY);
 
         // Router should not retain any assets
         assertEq(tokenA.balanceOf(address(router)), 0);
@@ -777,10 +765,7 @@ contract UniswapV2RouterLiquidityTest is Test {
         assertEq(UniswapV2Pair(pair).totalSupply(), LOCKED_LIQUIDITY);
 
         // Reserves updated
-        (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
-
-        assertEq(reserve0, LOCKED_LIQUIDITY);
-        assertEq(reserve1, LOCKED_LIQUIDITY);
+        _assertReserves(pair, LOCKED_LIQUIDITY, LOCKED_LIQUIDITY);
 
         // Router should not retain any assets
         assertEq(tokenA.balanceOf(address(router)), 0);
@@ -855,10 +840,6 @@ contract UniswapV2RouterLiquidityTest is Test {
             address(tokenA), liquidity, AMOUNT_MIN, AMOUNT_MIN, USER1, deadline, false, v, r, s
         );
     }
-
-    /*//////////////////////////////////////////////////////////////
-                      SWAP EXACT TOKENS FOR TOKENS
-    //////////////////////////////////////////////////////////////*/
 
     /*//////////////////////////////////////////////////////////////
                                 HELPERS

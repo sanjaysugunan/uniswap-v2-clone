@@ -8,9 +8,9 @@ import {UniswapV2Router} from "src/periphery/UniswapV2Router.sol";
 import {IUniswapV2Router} from "src/interfaces/IUniswapV2Router.sol";
 import {UniswapV2Library} from "src/libraries/UniswapV2Library.sol";
 import {DeployUniswapV2} from "script/DeployUniswapV2.s.sol";
-
-import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {WETH9} from "../mocks/WETH9.sol";
+// Oz imports
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 contract UniswapV2RouterSwapTest is Test {
     DeployUniswapV2 public deployer;

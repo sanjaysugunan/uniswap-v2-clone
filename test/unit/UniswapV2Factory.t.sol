@@ -4,8 +4,9 @@ pragma solidity ^0.8.24;
 import {Test, console2} from "forge-std/Test.sol";
 import {UniswapV2Factory} from "src/core/UniswapV2Factory.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
-import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
+// Oz imports
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 contract UniswapV2FactoryTest is Test {
     UniswapV2Factory public factory;

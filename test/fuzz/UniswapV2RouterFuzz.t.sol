@@ -7,11 +7,10 @@ import {UniswapV2Factory} from "src/core/UniswapV2Factory.sol";
 import {UniswapV2Router} from "src/periphery/UniswapV2Router.sol";
 import {DeployUniswapV2} from "script/DeployUniswapV2.s.sol";
 import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
-
+import {WETH9} from "../mocks/WETH9.sol";
+// Oz imports
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import {WETH9} from "../mocks/WETH9.sol";
 
 contract UniswapV2RouterFuzzTest is Test {
     DeployUniswapV2 internal deployer;

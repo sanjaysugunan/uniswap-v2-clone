@@ -5,9 +5,9 @@ import {Test, console2} from "forge-std/Test.sol";
 import {UniswapV2Factory} from "src/core/UniswapV2Factory.sol";
 import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
-
-import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
+// Oz imports
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 contract UniswapV2PairTest is Test {
     UniswapV2Factory public factory;
@@ -80,9 +80,8 @@ contract UniswapV2PairTest is Test {
         assertEq(pair.balanceOf(USER1) + LOCKED_LIQUIDITY, INITIAL_LIQUIDITY);
         assertEq(pair.totalSupply(), INITIAL_LIQUIDITY);
         assertEq(pair.balanceOf(BURN_ADDRESS), LOCKED_LIQUIDITY);
-        assertEq(tokenA.balanceOf(address(pair)), INITIAL_LIQUIDITY);
-        assertEq(tokenB.balanceOf(address(pair)), INITIAL_LIQUIDITY);
         _assertReserves(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
+        _assertPairBalances(INITIAL_LIQUIDITY, INITIAL_LIQUIDITY);
     }
 
     function testSecondMint() public {
@@ -393,7 +392,7 @@ contract UniswapV2PairTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                INTERNAL FUNCTIONS in UniswapV2Pair
+                INTERNAL FUNCTIONS IN UNISWAPV2PAIR
     //////////////////////////////////////////////////////////////*/
     function testSafeTransferRevertsIfTransferFailed() public {
         MockFailedTransfer badToken = new MockFailedTransfer();

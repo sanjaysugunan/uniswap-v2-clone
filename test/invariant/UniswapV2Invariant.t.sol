@@ -9,9 +9,9 @@ import {Handler} from "./Handler.t.sol";
 import {UniswapV2Factory} from "src/core/UniswapV2Factory.sol";
 import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
 import {UniswapV2Router} from "src/periphery/UniswapV2Router.sol";
-
-import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {WETH9} from "../mocks/WETH9.sol";
+// Oz imports
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 contract UniswapV2InvariantTest is StdInvariant, Test {
     UniswapV2Factory factory;
