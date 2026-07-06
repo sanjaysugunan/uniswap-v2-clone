@@ -21,11 +21,16 @@ contract UniswapV2RouterLiquidityTest is Test {
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
-    address USER1;
-    uint256 USER1_PRIVATE_KEY;
+    // address USER1;
+    // uint256 USER1_PRIVATE_KEY;
 
-    address USER2;
-    uint256 USER2_PRIVATE_KEY;
+    // address USER2;
+    // uint256 USER2_PRIVATE_KEY;
+    uint256 USER1_PRIVATE_KEY = 1115555551;
+    address USER1 = vm.addr(USER1_PRIVATE_KEY);
+
+    uint256 USER2_PRIVATE_KEY = 1115555552;
+    address USER2 = vm.addr(USER2_PRIVATE_KEY);
 
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD; // to lock token since address(0) throws error in oz's ERC20
     // for permit and signing
@@ -51,8 +56,8 @@ contract UniswapV2RouterLiquidityTest is Test {
     uint256 constant IMPOSSIBLE_AMOUNT_MIN = 11 ether;
 
     function setUp() public {
-        (USER1, USER1_PRIVATE_KEY) = makeAddrAndKey("user1");
-        (USER2, USER2_PRIVATE_KEY) = makeAddrAndKey("user2");
+        // (USER1, USER1_PRIVATE_KEY) = makeAddrAndKey("user1");
+        // (USER2, USER2_PRIVATE_KEY) = makeAddrAndKey("user2");
 
         deployer = new DeployUniswapV2();
         (factory, router, wethAddress) = deployer.run();
@@ -68,6 +73,9 @@ contract UniswapV2RouterLiquidityTest is Test {
             tokenB.mint(user, STARTING_USER_BALANCE);
         }
     }
+
+    // for recieving ETH
+    receive() external payable {}
 
     /*//////////////////////////////////////////////////////////////
                              ADD LIQUIDITY

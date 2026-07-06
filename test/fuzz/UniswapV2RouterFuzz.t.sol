@@ -45,6 +45,9 @@ contract UniswapV2RouterFuzzTest is Test {
         vm.stopPrank();
     }
 
+    // For recieving ETH
+    receive() external payable {}
+
     /*//////////////////////////////////////////////////////////////
                            ADD LIQUIDITY FUZZ
     //////////////////////////////////////////////////////////////*/

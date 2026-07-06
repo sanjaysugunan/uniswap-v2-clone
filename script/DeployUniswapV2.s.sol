@@ -14,7 +14,7 @@ contract DeployUniswapV2 is Script {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
 
-        vm.startBroadcast(config.deployerKey);
+        vm.startBroadcast(config.account);
 
         factory = new UniswapV2Factory();
         router = new UniswapV2Router(address(factory), config.weth);

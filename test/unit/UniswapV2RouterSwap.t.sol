@@ -67,6 +67,9 @@ contract UniswapV2RouterSwapTest is Test {
         }
     }
 
+    // for recieving ETH
+    receive() external payable {}
+
     /*//////////////////////////////////////////////////////////////
                               SWAP HELPERS
     //////////////////////////////////////////////////////////////*/
