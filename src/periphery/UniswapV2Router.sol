@@ -33,6 +33,14 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/**
+ * @title UniswapV2Router
+ * @author Sanjay Sugunan
+ * @notice Provides the primary interface for interacting with Uniswap V2 liquidity pools.
+ * @dev Handles liquidity management and token swaps while enforcing slippage
+ *      protection, deadline checks, and optimal liquidity calculations. Uses
+ *      UniswapV2Library to compute pair addresses and swap amounts.
+ */
 contract UniswapV2Router is IUniswapV2Router {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -43,6 +51,12 @@ contract UniswapV2Router is IUniswapV2Router {
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Ensures the transaction is executed before the specified deadline.
+     * @dev Reverts if the current block timestamp exceeds the provided deadline,
+     *      protecting users from executing stale transactions.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     */
     modifier ensure(uint256 deadline) {
         if (deadline < block.timestamp) revert UniswapV2Router__Expired();
         _;
@@ -51,21 +65,49 @@ contract UniswapV2Router is IUniswapV2Router {
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Initializes the router with the factory and WETH contract addresses.
+     * @dev Sets the immutable factory and WETH addresses used for pair lookups,
+     *      liquidity management, and ETH wrapping/unwrapping.
+     * @param _factory The address of the UniswapV2Factory contract.
+     * @param _WETH The address of the Wrapped Ether (WETH) contract.
+     */
     constructor(address _factory, address _WETH) {
         i_factory = _factory;
         i_WETH = _WETH;
     }
 
-    // try to understand this
+    /*//////////////////////////////////////////////////////////////
+                            RECIEVE FUNCTION
+    //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Receives native ETH exclusively from the WETH contract.
+     * @dev Reverts if ETH is sent by any address other than the WETH contract,
+     *      preventing accidental or unauthorized ETH transfers.
+     */
     receive() external payable {
         if (msg.sender != i_WETH) {
-            revert UniswapV2Router__OnlyWETH(); // only accept ETH via fallback from the WETH contract
+            revert UniswapV2Router__OnlyWETH();
         }
     }
 
     /*//////////////////////////////////////////////////////////////
                              ADD LIQUIDITY
     //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Calculates the optimal token amounts for adding liquidity.
+     * @dev Creates the pair if it does not already exist and determines the
+     *      optimal deposit amounts based on the current pool reserves while
+     *      enforcing the user's minimum amount constraints.
+     * @param tokenA The address of the first token.
+     * @param tokenB The address of the second token.
+     * @param amountADesired The desired amount of tokenA to deposit.
+     * @param amountBDesired The desired amount of tokenB to deposit.
+     * @param amountAMin The minimum acceptable amount of tokenA.
+     * @param amountBMin The minimum acceptable amount of tokenB.
+     * @return amountA The actual amount of tokenA to deposit.
+     * @return amountB The actual amount of tokenB to deposit.
+     */
     function _addLiquidity(
         address tokenA,
         address tokenB,
@@ -95,6 +137,22 @@ contract UniswapV2Router is IUniswapV2Router {
         }
     }
 
+    /**
+     * @notice Adds liquidity to a token pair and mints LP tokens.
+     * @dev Determines the optimal deposit amounts, transfers the tokens to the
+     *      pair contract, and mints LP tokens to the specified recipient.
+     * @param tokenA The address of the first token.
+     * @param tokenB The address of the second token.
+     * @param amountADesired The desired amount of tokenA to deposit.
+     * @param amountBDesired The desired amount of tokenB to deposit.
+     * @param amountAMin The minimum acceptable amount of tokenA.
+     * @param amountBMin The minimum acceptable amount of tokenB.
+     * @param to The address receiving the minted LP tokens.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amountA The actual amount of tokenA deposited.
+     * @return amountB The actual amount of tokenB deposited.
+     * @return liquidity The amount of LP tokens minted.
+     */
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -112,6 +170,20 @@ contract UniswapV2Router is IUniswapV2Router {
         liquidity = IUniswapV2Pair(pair).mint(to);
     }
 
+    /**
+     * @notice Adds liquidity to a token-WETH pair using native ETH.
+     * @dev Wraps the supplied ETH into WETH, transfers both assets to the pair,
+     *      mints LP tokens to the specified recipient, and refunds any excess ETH.
+     * @param token The address of the ERC20 token.
+     * @param amountTokenDesired The desired amount of the ERC20 token to deposit.
+     * @param amountTokenMin The minimum acceptable amount of the ERC20 token.
+     * @param amountETHMin The minimum acceptable amount of ETH.
+     * @param to The address receiving the minted LP tokens.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amountToken The actual amount of the ERC20 token deposited.
+     * @return amountETH The actual amount of ETH deposited.
+     * @return liquidity The amount of LP tokens minted.
+     */
     function addLiquidityETH(
         address token,
         uint256 amountTokenDesired,
@@ -134,6 +206,20 @@ contract UniswapV2Router is IUniswapV2Router {
     /*//////////////////////////////////////////////////////////////
                             REMOVE LIQUIDITY
     //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Removes liquidity from a token pair and returns the underlying assets.
+     * @dev Burns the specified LP tokens, transfers the underlying tokens to the
+     *      recipient, and enforces the user's minimum amount constraints.
+     * @param tokenA The address of the first token.
+     * @param tokenB The address of the second token.
+     * @param liquidity The amount of LP tokens to burn.
+     * @param amountAMin The minimum acceptable amount of tokenA.
+     * @param amountBMin The minimum acceptable amount of tokenB.
+     * @param to The address receiving the underlying tokens.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amountA The amount of tokenA returned.
+     * @return amountB The amount of tokenB returned.
+     */
     function removeLiquidity(
         address tokenA,
         address tokenB,
@@ -152,6 +238,20 @@ contract UniswapV2Router is IUniswapV2Router {
         if (amountB < amountBMin) revert UniswapV2Router__InsufficientAmountB();
     }
 
+    /**
+     * @notice Removes liquidity from a token-WETH pair and returns native ETH.
+     * @dev Burns the specified LP tokens, unwraps WETH into ETH, transfers the
+     *      ERC20 tokens and ETH to the recipient, and enforces the user's minimum
+     *      amount constraints.
+     * @param token The address of the ERC20 token.
+     * @param liquidity The amount of LP tokens to burn.
+     * @param amountTokenMin The minimum acceptable amount of the ERC20 token.
+     * @param amountETHMin The minimum acceptable amount of ETH.
+     * @param to The address receiving the underlying assets.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amountToken The amount of the ERC20 token returned.
+     * @return amountETH The amount of ETH returned.
+     */
     function removeLiquidityETH(
         address token,
         uint256 liquidity,
@@ -168,7 +268,20 @@ contract UniswapV2Router is IUniswapV2Router {
         TransferHelper.safeTransferETH(to, amountETH);
     }
 
-    // to avoid stack too deep errors
+    /**
+     * @notice Approves the router to spend LP tokens using an EIP-2612 permit signature.
+     * @dev Computes the pair address, determines the approval amount, and invokes
+     *      the pair's permit function to authorize LP token transfers without a
+     *      separate approval transaction.
+     * @param tokenA The address of the first token in the pair.
+     * @param tokenB The address of the second token in the pair.
+     * @param liquidity The amount of LP tokens to approve.
+     * @param deadline The permit signature expiration timestamp.
+     * @param approveMax Whether to approve the maximum uint256 value instead of the specified liquidity.
+     * @param v The recovery byte of the ECDSA signature.
+     * @param r The first 32 bytes of the ECDSA signature.
+     * @param s The second 32 bytes of the ECDSA signature.
+     */
     function _permitLiquidity(
         address tokenA,
         address tokenB,
@@ -184,6 +297,24 @@ contract UniswapV2Router is IUniswapV2Router {
         IERC20Permit(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
     }
 
+    /**
+     * @notice Removes liquidity using an EIP-2612 permit signature for LP token approval.
+     * @dev Approves the router via permit and removes the specified liquidity in a
+     *      single transaction, eliminating the need for a prior approval call.
+     * @param tokenA The address of the first token.
+     * @param tokenB The address of the second token.
+     * @param liquidity The amount of LP tokens to burn.
+     * @param amountAMin The minimum acceptable amount of tokenA.
+     * @param amountBMin The minimum acceptable amount of tokenB.
+     * @param to The address receiving the underlying tokens.
+     * @param deadline The latest timestamp at which the transaction and permit are valid.
+     * @param approveMax Whether to approve the maximum uint256 value instead of the specified liquidity.
+     * @param v The recovery byte of the ECDSA signature.
+     * @param r The first 32 bytes of the ECDSA signature.
+     * @param s The second 32 bytes of the ECDSA signature.
+     * @return amountA The amount of tokenA returned.
+     * @return amountB The amount of tokenB returned.
+     */
     function removeLiquidityWithPermit(
         address tokenA,
         address tokenB,
@@ -197,13 +328,29 @@ contract UniswapV2Router is IUniswapV2Router {
         bytes32 r,
         bytes32 s
     ) external override ensure(deadline) returns (uint256 amountA, uint256 amountB) {
-        // address pair = UniswapV2Library.pairFor(i_factory, tokenA, tokenB);
-        // uint256 value = approveMax ? type(uint256).max : liquidity;
-        // IERC20Permit(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        // to avoid stack too deep errors
         _permitLiquidity(tokenA, tokenB, liquidity, deadline, approveMax, v, r, s);
         (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
     }
 
+    /**
+     * @notice Removes liquidity from a token-WETH pair using an EIP-2612 permit signature.
+     * @dev Approves the router to spend LP tokens via permit, removes the specified
+     *      liquidity, unwraps WETH into native ETH, and transfers the ERC20 tokens
+     *      and ETH to the recipient in a single transaction.
+     * @param token The address of the ERC20 token.
+     * @param liquidity The amount of LP tokens to burn.
+     * @param amountTokenMin The minimum acceptable amount of the ERC20 token.
+     * @param amountETHMin The minimum acceptable amount of ETH.
+     * @param to The address receiving the underlying assets.
+     * @param deadline The latest timestamp at which the transaction and permit are valid.
+     * @param approveMax Whether to approve the maximum uint256 value instead of the specified liquidity.
+     * @param v The recovery byte of the ECDSA signature.
+     * @param r The first 32 bytes of the ECDSA signature.
+     * @param s The second 32 bytes of the ECDSA signature.
+     * @return amountToken The amount of the ERC20 token returned.
+     * @return amountETH The amount of native ETH returned.
+     */
     function removeLiquidityETHWithPermit(
         address token,
         uint256 liquidity,
@@ -216,9 +363,7 @@ contract UniswapV2Router is IUniswapV2Router {
         bytes32 r,
         bytes32 s
     ) external override ensure(deadline) returns (uint256 amountToken, uint256 amountETH) {
-        // address pair = UniswapV2Library.pairFor(i_factory, token, i_WETH);
-        // uint256 value = approveMax ? type(uint256).max : liquidity;
-        // IERC20Permit(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        // to avoid stack too deep errors
         _permitLiquidity(token, i_WETH, liquidity, deadline, approveMax, v, r, s);
         (amountToken, amountETH) = removeLiquidityETH(token, liquidity, amountTokenMin, amountETHMin, to, deadline);
     }
@@ -226,6 +371,15 @@ contract UniswapV2Router is IUniswapV2Router {
     /*//////////////////////////////////////////////////////////////
                                   SWAP
     //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Executes a multi-hop token swap along the specified path.
+     * @dev Iterates through each pair in the swap path, forwarding the output
+     *      tokens from one pair to the next until the final recipient receives
+     *      the output tokens.
+     * @param amounts The amounts to swap at each step of the path.
+     * @param path The sequence of token addresses defining the swap route.
+     * @param _to The final recipient of the output tokens.
+     */
     function _swap(uint256[] memory amounts, address[] memory path, address _to) internal {
         for (uint256 i = 0; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
@@ -239,6 +393,18 @@ contract UniswapV2Router is IUniswapV2Router {
         }
     }
 
+    /**
+     * @notice Swaps an exact amount of input tokens for as many output tokens as possible.
+     * @dev Computes the output amounts for the specified path, enforces the minimum
+     *      output constraint, transfers the input tokens to the first pair, and
+     *      executes the multi-hop swap.
+     * @param amountIn The exact amount of input tokens to swap.
+     * @param amountOutMin The minimum acceptable amount of output tokens.
+     * @param path The sequence of token addresses defining the swap route.
+     * @param to The address receiving the output tokens.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amounts The amount of tokens exchanged at each step of the swap path.
+     */
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -254,6 +420,18 @@ contract UniswapV2Router is IUniswapV2Router {
         _swap(amounts, path, to);
     }
 
+    /**
+     * @notice Swaps tokens to receive an exact amount of output tokens.
+     * @dev Computes the required input amounts for the specified path, enforces
+     *      the maximum input constraint, transfers the input tokens to the first
+     *      pair, and executes the multi-hop swap.
+     * @param amountOut The exact amount of output tokens to receive.
+     * @param amountInMax The maximum acceptable amount of input tokens.
+     * @param path The sequence of token addresses defining the swap route.
+     * @param to The address receiving the output tokens.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amounts The amount of tokens exchanged at each step of the swap path.
+     */
     function swapTokensForExactTokens(
         uint256 amountOut,
         uint256 amountInMax,
@@ -269,6 +447,17 @@ contract UniswapV2Router is IUniswapV2Router {
         _swap(amounts, path, to);
     }
 
+    /**
+     * @notice Swaps an exact amount of native ETH for as many output tokens as possible.
+     * @dev Wraps the supplied ETH into WETH, transfers it to the first pair,
+     *      computes the output amounts, enforces the minimum output constraint,
+     *      and executes the multi-hop swap.
+     * @param amountOutMin The minimum acceptable amount of output tokens.
+     * @param path The sequence of token addresses defining the swap route. The first token must be WETH.
+     * @param to The address receiving the output tokens.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amounts The amount of tokens exchanged at each step of the swap path.
+     */
     function swapExactETHForTokens(uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
         external
         payable
@@ -286,6 +475,19 @@ contract UniswapV2Router is IUniswapV2Router {
         _swap(amounts, path, to);
     }
 
+    /**
+     * @notice Swaps tokens to receive an exact amount of native ETH.
+     * @dev Computes the required input amounts, transfers the input tokens to the
+     *      first pair, executes the multi-hop swap, unwraps WETH into ETH, and
+     *      transfers the ETH to the recipient. Reverts if the required input
+     *      exceeds the specified maximum.
+     * @param amountOut The exact amount of ETH to receive.
+     * @param amountInMax The maximum acceptable amount of input tokens.
+     * @param path The sequence of token addresses defining the swap route. The last token must be WETH.
+     * @param to The address receiving the native ETH.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amounts The amount of tokens exchanged at each step of the swap path.
+     */
     function swapTokensForExactETH(
         uint256 amountOut,
         uint256 amountInMax,
@@ -304,6 +506,19 @@ contract UniswapV2Router is IUniswapV2Router {
         TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
     }
 
+    /**
+     * @notice Swaps an exact amount of input tokens for as much native ETH as possible.
+     * @dev Computes the output amounts, transfers the input tokens to the first
+     *      pair, executes the multi-hop swap, unwraps WETH into ETH, and transfers
+     *      the ETH to the recipient. Reverts if the output ETH is less than the
+     *      specified minimum.
+     * @param amountIn The exact amount of input tokens to swap.
+     * @param amountOutMin The minimum acceptable amount of ETH.
+     * @param path The sequence of token addresses defining the swap route. The last token must be WETH.
+     * @param to The address receiving the native ETH.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amounts The amount of tokens exchanged at each step of the swap path.
+     */
     function swapExactTokensForETH(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -322,6 +537,17 @@ contract UniswapV2Router is IUniswapV2Router {
         TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
     }
 
+    /**
+     * @notice Swaps native ETH for an exact amount of output tokens.
+     * @dev Wraps the required ETH into WETH, transfers it to the first pair,
+     *      executes the multi-hop swap, and refunds any excess ETH to the sender.
+     *      Reverts if the required ETH exceeds the amount sent.
+     * @param amountOut The exact amount of output tokens to receive.
+     * @param path The sequence of token addresses defining the swap route. The first token must be WETH.
+     * @param to The address receiving the output tokens.
+     * @param deadline The latest timestamp at which the transaction is valid.
+     * @return amounts The amount of tokens exchanged at each step of the swap path.
+     */
     function swapETHForExactTokens(uint256 amountOut, address[] calldata path, address to, uint256 deadline)
         external
         payable
