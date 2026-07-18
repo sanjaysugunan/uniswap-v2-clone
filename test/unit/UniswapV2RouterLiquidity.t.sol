@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {UniswapV2Factory} from "src/core/UniswapV2Factory.sol";
 import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
 import {UniswapV2Router} from "src/periphery/UniswapV2Router.sol";
@@ -902,7 +902,9 @@ contract UniswapV2RouterLiquidityTest is Test {
     function _assertReserves(address pair, uint256 expectedReserve0, uint256 expectedReserve1) internal view {
         (uint112 reserve0, uint112 reserve1,) = UniswapV2Pair(pair).getReserves();
 
+        // forge-lint: disable-next-line(unsafe-typecast)
         assertEq(reserve0, uint112(expectedReserve0));
+        // forge-lint: disable-next-line(unsafe-typecast)
         assertEq(reserve1, uint112(expectedReserve1));
     }
 

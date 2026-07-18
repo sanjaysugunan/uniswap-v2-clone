@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {UniswapV2Factory} from "src/core/UniswapV2Factory.sol";
 import {UniswapV2Pair} from "src/core/UniswapV2Pair.sol";
 import {UniswapV2Router} from "src/periphery/UniswapV2Router.sol";
@@ -298,8 +298,6 @@ contract UniswapV2RouterSwapTest is Test {
         assertEq(amounts[1], expectedAmounts[1]);
 
         // Assert user balances
-        console2.log(USER2.balance);
-        console2.log(userEthBalanceBefore);
         assertEq(USER2.balance, userEthBalanceBefore - SWAP_INPUT);
         assertEq(tokenA.balanceOf(USER2), userTokenBalanceBefore + expectedAmounts[1]);
 
@@ -649,7 +647,6 @@ contract UniswapV2RouterSwapTest is Test {
         assertEq(amounts.length, 2);
 
         assertEq(amounts[0], expectedAmounts[0]);
-        console2.log("reached");
 
         assertEq(amounts[1], expectedAmounts[1]);
 

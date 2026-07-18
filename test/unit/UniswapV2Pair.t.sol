@@ -378,6 +378,7 @@ contract UniswapV2PairTest is Test {
         _donate(USER1, SWAP_INPUT, SWAP_INPUT);
 
         vm.expectEmit(false, false, false, true, address(pair));
+        // forge-lint: disable-next-line(unsafe-typecast)
         emit Sync(uint112(INITIAL_LIQUIDITY + SWAP_INPUT), uint112(INITIAL_LIQUIDITY + SWAP_INPUT));
         pair.sync();
     }
@@ -438,9 +439,12 @@ contract UniswapV2PairTest is Test {
     }
 
     function _assertReserves(uint256 expected0, uint256 expected1) internal view {
+        // forge-lint: disable-next-line(unsafe-typecast)
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
 
+        // forge-lint: disable-next-line(unsafe-typecast)
         assertEq(reserve0, uint112(expected0));
+        // forge-lint: disable-next-line(unsafe-typecast)
         assertEq(reserve1, uint112(expected1));
     }
 
