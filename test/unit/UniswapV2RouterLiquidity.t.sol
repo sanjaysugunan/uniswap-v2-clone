@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.30;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {UniswapV2Factory} from "src/core/UniswapV2Factory.sol";
