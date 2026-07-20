@@ -4,13 +4,16 @@
 
 **A production-style implementation of the Uniswap V2 AMM protocol — built from scratch with Solidity & Foundry.**
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=2800&pause=800&color=FF007A&center=true&vCenter=true&width=560&lines=x+*+y+%3D+k;Factory+%C2%B7+Pair+%C2%B7+Router+%C2%B7+LP+Token;Unit.+Fuzzed.+Invariant-tested.+Done." alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=2800&pause=800&color=FF007A&center=true&vCenter=true&width=560&lines=x+*+y+%3D+k;Factory+%C2%B7+Pair+%C2%B7+Router+%C2%B7+LP+Token;Unit.+Fuzzed.+Invariant-tested.+Shipped." alt="Typing SVG" />
 
 [![Foundry](https://img.shields.io/badge/built%20with-Foundry-orange?style=flat-square)](https://book.getfoundry.sh/)
-[![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.24-363636?style=flat-square&logo=solidity)](https://soliditylang.org/)
+[![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.30-363636?style=flat-square&logo=solidity)](https://soliditylang.org/)
 [![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-4E5EE4?style=flat-square&logo=openzeppelin&logoColor=white)](https://openzeppelin.com/)
+[![Deployed](https://img.shields.io/badge/deployed-Sepolia-627EEA?style=flat-square&logo=ethereum&logoColor=white)](#-live-deployment)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
 [![Status](https://img.shields.io/badge/status-complete-brightgreen?style=flat-square)](#-testing-strategy)
+
+**[🌐 Try it live](https://uniswap-v2-clone-sanjay-sugunan.vercel.app/)** · Frontend repo: [uniswap-v2-frontend](https://github.com/sanjaysugunan/uniswap-v2-frontend)
 
 </div>
 
@@ -18,7 +21,26 @@
 
 A from-scratch, line-by-line reimplementation of Uniswap V2 — not a fork, not a copy-paste of the audited source. The goal was to understand *every* design decision in the protocol: why reserves are packed into a single storage slot, why `UQ112x112` fixed-point math exists, why `MINIMUM_LIQUIDITY` gets burned forever, and exactly what happens on-chain, byte by byte, when a swap executes.
 
-**Factory · Pair · Router · LP Token · Libraries — all built, all tested (unit + fuzz + invariant).**
+**Factory · Pair · Router · LP Token · Libraries — all built, all tested (unit + fuzz + invariant), all deployed live on Sepolia with a working frontend on top.**
+
+---
+
+## 🌐 Live Deployment
+
+The full stack is live and usable end-to-end: connect a wallet on Sepolia, claim test tokens, add liquidity, and swap — all through the [frontend](https://uniswap-v2-clone-sanjay-sugunan.vercel.app/), which talks to these deployed contracts.
+
+**Network:** Sepolia (chain ID `11155111`)
+
+| Contract | Address |
+|---|---|
+| `UniswapV2Factory` | [`0x96E606463d41DAeFf0246D905013aE0CDC5CCef2`](https://sepolia.etherscan.io/address/0x96E606463d41DAeFf0246D905013aE0CDC5CCef2) |
+| `UniswapV2Router` | [`0xb15a4579E05Da61E9aDBE77bdD28479E7f6301A3`](https://sepolia.etherscan.io/address/0xb15a4579E05Da61E9aDBE77bdD28479E7f6301A3) |
+| `WETH` | [`0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c`](https://sepolia.etherscan.io/address/0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c) |
+| `TokenA` (mock ERC-20) | [`0x3fA373A4dD14D51204Ae9fA4a304d27ace75618b`](https://sepolia.etherscan.io/address/0x3fA373A4dD14D51204Ae9fA4a304d27ace75618b) |
+| `TokenB` (mock ERC-20) | [`0xA8fCf35bacd4bb5524E356A58d7Cda632446c37b`](https://sepolia.etherscan.io/address/0xA8fCf35bacd4bb5524E356A58d7Cda632446c37b) |
+| `TokenC` (mock ERC-20) | [`0x646151fae8178D2fe68Ef8095129AeB78332979A`](https://sepolia.etherscan.io/address/0x646151fae8178D2fe68Ef8095129AeB78332979A) |
+
+`TokenA`, `TokenB`, and `TokenC` are mock ERC-20s minted for free via the frontend's faucet page — no real funds needed to try the protocol end to end.
 
 ---
 
@@ -196,11 +218,11 @@ TokenA + TokenB
 </td>
 <td valign="top" width="33%">
 
-**Testing**
-- [x] Unit tests
-- [x] Fuzz tests
-- [x] Invariant tests
+**Shipped**
+- [x] Unit / fuzz / invariant tests
 - [x] Deployment & interaction scripts
+- [x] Deployed live on Sepolia
+- [x] Working frontend on top
 
 </td>
 </tr>
@@ -248,6 +270,10 @@ forge coverage          # coverage report
 
 ## 🚀 Getting Started
 
+**Fastest way to try it:** skip local setup entirely and use the **[live frontend](https://uniswap-v2-clone-sanjay-sugunan.vercel.app/)** — connect a wallet on Sepolia, claim test tokens from the faucet page, and start swapping against the deployed contracts above.
+
+To run the contracts locally instead:
+
 **1. Prerequisites** — [Foundry](https://book.getfoundry.sh/getting-started/installation) installed.
 
 **2. Clone & install**
@@ -290,6 +316,7 @@ forge script script/interactions/Interactions.s.sol --rpc-url http://127.0.0.1:8
 - Price accumulators and TWAP oracle design
 - Solidity gas optimizations — packed storage slots, `UQ112x112` fixed-point math
 - Foundry methodology end to end: unit → fuzz → stateful invariant testing
+- Shipping a full stack: wiring a Next.js/wagmi frontend to a self-deployed AMM on a live testnet
 
 ---
 
@@ -304,6 +331,13 @@ This is **not** intended for production deployment or to hold real funds — it 
 - [Uniswap V2 Whitepaper](https://uniswap.org/whitepaper.pdf)
 - [Uniswap V2 Core](https://github.com/Uniswap/v2-core)
 - [Uniswap V2 Periphery](https://github.com/Uniswap/v2-periphery)
+
+---
+
+## 🔗 Related
+
+- Frontend: [uniswap-v2-frontend](https://github.com/sanjaysugunan/uniswap-v2-frontend)
+- Live demo: [uniswap-v2-clone-sanjay-sugunan.vercel.app](https://uniswap-v2-clone-sanjay-sugunan.vercel.app/)
 
 ---
 
